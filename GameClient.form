@@ -7,9 +7,6 @@
     <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
       <Color blue="ff" green="ff" red="ff" type="rgb"/>
     </Property>
-    <Property name="preferredSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
-      <Dimension value="[1300, 800]"/>
-    </Property>
     <Property name="resizable" type="boolean" value="false"/>
   </Properties>
   <SyntheticProperties>
@@ -58,15 +55,20 @@
                   <EmptySpace min="-2" pref="33" max="-2" attributes="0"/>
                   <Group type="103" groupAlignment="0" attributes="0">
                       <Component id="gameStatusPanel" min="-2" max="-2" attributes="0"/>
-                      <Group type="102" attributes="0">
+                      <Group type="102" alignment="0" attributes="0">
                           <Component id="jScrollPane3" min="-2" pref="181" max="-2" attributes="0"/>
                           <EmptySpace type="unrelated" max="-2" attributes="0"/>
-                          <Component id="drawingPanel" min="-2" pref="769" max="-2" attributes="0"/>
-                          <EmptySpace type="unrelated" max="-2" attributes="0"/>
                           <Group type="103" groupAlignment="0" attributes="0">
-                              <Component id="jScrollPane2" alignment="0" min="-2" pref="256" max="-2" attributes="0"/>
-                              <Component id="jTextField1" min="-2" pref="256" max="-2" attributes="0"/>
-                              <Component id="jButton1" min="-2" pref="256" max="-2" attributes="0"/>
+                              <Group type="102" attributes="0">
+                                  <Component id="drawingPanel" min="-2" pref="769" max="-2" attributes="0"/>
+                                  <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                                  <Group type="103" groupAlignment="0" attributes="0">
+                                      <Component id="jScrollPane2" alignment="0" min="-2" pref="256" max="-2" attributes="0"/>
+                                      <Component id="jTextField1" min="-2" pref="256" max="-2" attributes="0"/>
+                                      <Component id="jButton1" min="-2" pref="256" max="-2" attributes="0"/>
+                                  </Group>
+                              </Group>
+                              <Component id="jSlider1" min="-2" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>
@@ -96,7 +98,9 @@
                           </Group>
                       </Group>
                   </Group>
-                  <EmptySpace pref="151" max="32767" attributes="0"/>
+                  <EmptySpace type="separate" max="-2" attributes="0"/>
+                  <Component id="jSlider1" min="-2" pref="33" max="-2" attributes="0"/>
+                  <EmptySpace pref="100" max="32767" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
@@ -111,6 +115,9 @@
           <AccessibilityProperties>
             <Property name="AccessibleContext.accessibleName" type="java.lang.String" value=""/>
           </AccessibilityProperties>
+          <AuxValues>
+            <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new JPanel(){&#xa;    @Override&#xa;    protected void paintComponent(Graphics g) {&#xa;        super.paintComponent(g);&#xa;        g.setColor(Color.BLACK);&#xa;        for (Point p : points) {&#xa;            g.fillOval(p.x, p.y, 10, 10); // Draw each point in the list&#xa;        }&#xa;    }&#xa;&#xa;};&#xa;//  -- added paintComponent method for the drawing functionality)"/>
+          </AuxValues>
 
           <Layout class="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout">
             <Property name="useNullLayout" type="boolean" value="true"/>
@@ -259,6 +266,8 @@
             </Component>
           </SubComponents>
         </Container>
+        <Component class="javax.swing.JSlider" name="jSlider1">
+        </Component>
       </SubComponents>
     </Container>
   </SubComponents>

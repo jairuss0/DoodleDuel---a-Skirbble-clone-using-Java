@@ -46,7 +46,7 @@ public class GameServer {
     public void broadcastMessage(String messageFromClient,ClientHandlerGame client){
         for(ClientHandlerGame player : players){
             // exclude the sender
-            if(!player.getUsername().equals(client.getUsername())){
+            if(player != client){
                 player.writer.println(messageFromClient);
             }
         }

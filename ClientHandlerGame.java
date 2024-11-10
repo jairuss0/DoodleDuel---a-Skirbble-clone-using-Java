@@ -43,12 +43,13 @@ public class ClientHandlerGame implements Runnable{
        String messageFromClient;
        try{
            while((messageFromClient = reader.readLine()) != null){
-                gameServer.broadcastMessage(messageFromClient);
+                gameServer.broadcastMessage(messageFromClient,this);
            }
        }catch(IOException e){
            closeEverything(socket, reader, writer);
        }
     }
+    
     
     private void closeEverything(Socket socket, BufferedReader bufferedReader, PrintWriter writer){
         // remove from the list if client left or disconnected
