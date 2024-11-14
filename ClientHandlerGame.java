@@ -18,6 +18,7 @@ public class ClientHandlerGame implements Runnable{
     public PrintWriter writer;
     public BufferedReader reader;
     private GameServer gameServer;
+    
 
     public ClientHandlerGame(Socket socket, GameServer gameServer) {
         try{
