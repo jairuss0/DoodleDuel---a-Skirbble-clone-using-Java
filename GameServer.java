@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 
 
 public class GameServer {
@@ -13,9 +14,15 @@ public class GameServer {
     private ArrayList<ClientHandlerGame> players;
     private ArrayList<String> drawHistory;
     private ArrayList<String> messageHistory;
+    private ArrayList<String> playerDetails;
+    private int currentPlayerIndexTurn;
+    private final int MAX_ROUND = 3;
+    private final int MAX_PLAYERS = 10;
+    
 
     public GameServer() {
         players = new ArrayList<>();
+        
     }
     
     private void startServer(){
@@ -58,18 +65,42 @@ public class GameServer {
         }
     }
     
+    public int returnPlayerListSize(){
+        return players.size();
+    }
 
     // add player to the list
     public void addClientHandler(ClientHandlerGame player){
         players.add(player);
-        broadcastMessage("ANNOUNCEMENT,GREEN,"+player.getUsername()+" joined the game!",player);
+        broadcastMessage("ANNOUNCEMENT,JOIN,"+player.getUsername()+" joined the game!",player);
+        // update the scoreboard (player list)
+        broadcastClientList();
     }
     
     // remove player from the list
     public void removeClientHandler(ClientHandlerGame player){
-        broadcastMessage("ANNOUNCEMENT,RED,"+player.getUsername()+" left the game!");
+        broadcastMessage("ANNOUNCEMENT,LEFT,"+player.getUsername()+" left the game!");
         players.remove(player);
-        
+        // update the scoreboard (player list)
+        broadcastClientList();
+    }
+    
+    public void broadcastClientList(){
+        playerDetails = new ArrayList<>();
+        // ensure the thread safety when trying to access the list just like the drawing point
+        synchronized (players) {
+            // sort the list of clients first in descinding order before sending it to each clients
+            Collections.sort(players);
+            int rank = 1;
+            for(ClientHandlerGame player: players){
+                playerDetails.add("#"+rank+","+player.getUsername()+","+player.getScore()+","+player.getPlayerID());
+                rank++;
+            }
+        }
+        // send the string arraylist of player details in each client
+        for(ClientHandlerGame player: players){
+            player.sendPlayerList(playerDetails);
+        }
     }
     
     

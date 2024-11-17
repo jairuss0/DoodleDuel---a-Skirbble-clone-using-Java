@@ -6,14 +6,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 
 
-public class ClientHandlerGame implements Runnable{
+public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame>{
 
     private Socket socket;
     private String username;
     private boolean isHost;
-    private boolean isDrawing;
+    private int playerID;
     private int score;
     public PrintWriter writer;
     public BufferedReader reader;
@@ -30,9 +31,10 @@ public class ClientHandlerGame implements Runnable{
             this.username = reader.readLine();
             this.score = 0;
             this.isHost = false;
-            this.isDrawing = false;
+            this.playerID = createID();
+            writer.println(this.playerID);
             // add the client to the arraylist
-            init();
+            addClient();
         }catch(IOException e){
             closeEverything(socket, reader, writer);
         }
@@ -44,15 +46,14 @@ public class ClientHandlerGame implements Runnable{
        String messageFromClient;
        try{
            while((messageFromClient = reader.readLine()) != null){
-                processMessage(messageFromClient);
-                
+                processMessage(messageFromClient); 
            }
        }catch(IOException e){
            closeEverything(socket, reader, writer);
        }
     }
     
-    
+    // this will evaluate what clients sent to server
     private void processMessage(String messageFromClient){
         String[] message = messageFromClient.split(",");
         
@@ -65,6 +66,12 @@ public class ClientHandlerGame implements Runnable{
                 break;
             case "ANNOUNCEMENT":
                 gameServer.broadcastMessage(messageFromClient);
+                break;
+            case "CLEAR-DRAWING":
+                gameServer.broadcastMessage(messageFromClient, this);
+                break;
+            case "UNDO-DRAWING":
+                gameServer.broadcastMessage(messageFromClient, this);
                 break;
         }
         
@@ -94,6 +101,10 @@ public class ClientHandlerGame implements Runnable{
         score += plusScore;
     }
     
+    // create simple unique id for each player
+    private int createID(){
+        return gameServer.returnPlayerListSize() + 1;
+    }
     
     // getters and setters
     
@@ -105,8 +116,8 @@ public class ClientHandlerGame implements Runnable{
         return score;
     }
     
-    public boolean getDrawAbility(){
-        return isDrawing;
+    public int getPlayerID(){
+        return playerID;
     }
     
     public boolean getHostStatus(){
@@ -125,12 +136,18 @@ public class ClientHandlerGame implements Runnable{
         this.isHost = status;
     }
     
-    public void setDrawAbility(boolean status){
-        this.isDrawing = status;
+    private void addClient(){
+        gameServer.addClientHandler(this);
     }
     
-    private void init(){
-        gameServer.addClientHandler(this);
+    // send the players data in string format 
+    public void sendPlayerList(ArrayList<String> playerData){
+        writer.println("PLAYER-LIST:"+ String.join(";",playerData));
+    }
+
+    @Override
+    public int compareTo(ClientHandlerGame otherPlayer) {
+        return Integer.compare(otherPlayer.score, this.score);
     }
     
 }

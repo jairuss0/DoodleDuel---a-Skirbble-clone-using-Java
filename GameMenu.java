@@ -3,11 +3,9 @@ package skribbl_clone;
 
 import java.io.IOException;
 import java.net.Socket;
+import javax.swing.SwingUtilities;
 
-/**
- *
- * @author Elijah
- */
+ 
 public class GameMenu extends javax.swing.JFrame {
 
    
@@ -95,16 +93,20 @@ public class GameMenu extends javax.swing.JFrame {
         if(!jTextField2.getText().equals("Enter your name") || !jTextField2.getText().equals("")){
             
             String username = jTextField2.getText();
-            try{
-                Socket socket = new Socket("localhost",1234);
-                GameClient gameClient = new GameClient(socket,username);
-                gameClient.setVisible(true);
-                gameClient.setLocationRelativeTo(null);
-                // method to listen for the incoming messages
-                gameClient.listenForMessage();
-            }catch(IOException e){
-                System.err.print(e);
-            }
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    // create socket object with the server ip and the server port that is listening to
+                    Socket socket = new Socket("localhost", 1234);
+                    GameClient gameClient = new GameClient(socket, username);
+                    gameClient.setVisible(true);
+                    gameClient.setLocationRelativeTo(null);
+                    // method to listen for the incoming messages
+                    gameClient.listenForMessage();
+                } catch (IOException e) {
+                    System.err.print(e);
+                }
+                
+            });
             
             this.dispose();
         }
