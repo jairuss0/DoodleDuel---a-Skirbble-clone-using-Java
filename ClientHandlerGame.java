@@ -32,7 +32,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
             this.score = 0;
             this.isHost = false;
             this.playerID = createID();
-            writer.println(this.playerID);
+            writer.println(this.playerID); // send the id to the corresponding client thread
             // add the client to the arraylist
             addClient();
         }catch(IOException e){
@@ -64,14 +64,14 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
             case "GUESS":
                 gameServer.broadcastMessage(messageFromClient);
                 break;
-            case "ANNOUNCEMENT":
-                gameServer.broadcastMessage(messageFromClient);
-                break;
             case "CLEAR-DRAWING":
                 gameServer.broadcastMessage(messageFromClient, this);
                 break;
             case "UNDO-DRAWING":
                 gameServer.broadcastMessage(messageFromClient, this);
+                break;
+            case "START-GAME":
+                gameServer.startGame(messageFromClient, this);
                 break;
         }
         
@@ -91,10 +91,14 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
                 socket.close();
             }
         }catch(IOException e){
-            e.printStackTrace();
+            System.err.println(e);
         }
     }
-   
+    
+    // this is for individual broadcast message
+    public void notifyPlayer(String message){
+        writer.println(message);
+    }
     
     // server would decide the score for each client who got the correct answer
     public void incrementScore(int plusScore){
@@ -104,6 +108,21 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     // create simple unique id for each player
     private int createID(){
         return gameServer.returnPlayerListSize() + 1;
+    }
+    
+    private void addClient(){
+        gameServer.addClientHandler(this);
+    }
+    
+    // send the players data in string format 
+    public void sendPlayerList(ArrayList<String> playerData){
+        writer.println("PLAYER-LIST:"+ String.join(";",playerData));
+    }
+    
+    // this is for sorting the array in descending order
+    @Override
+    public int compareTo(ClientHandlerGame otherPlayer) {
+        return Integer.compare(otherPlayer.score, this.score);
     }
     
     // getters and setters
@@ -136,18 +155,6 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         this.isHost = status;
     }
     
-    private void addClient(){
-        gameServer.addClientHandler(this);
-    }
     
-    // send the players data in string format 
-    public void sendPlayerList(ArrayList<String> playerData){
-        writer.println("PLAYER-LIST:"+ String.join(";",playerData));
-    }
-
-    @Override
-    public int compareTo(ClientHandlerGame otherPlayer) {
-        return Integer.compare(otherPlayer.score, this.score);
-    }
     
 }
