@@ -8,5 +8,6 @@ public class App {
         menu.setTitle("DoodleDuel - Menu");
         menu.setResizable(false);
         menu.setVisible(true);
+        menu.setLocationRelativeTo(null);
     }
 }

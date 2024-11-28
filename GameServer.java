@@ -6,12 +6,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Random;
+import java.util.TimerTask;
 import java.util.concurrent.*;
 
 
 public class GameServer {
     
     private ServerSocket server;
+    private WordDictionary wordDictionary;
     private ArrayList<ClientHandlerGame> players;
     private ArrayList<String> drawHistory;
     private ArrayList<String> messageHistory;
@@ -20,19 +23,23 @@ public class GameServer {
     private final int MAX_ROUND = 3;
     private final int MAX_PLAYERS = 10;
     private int currentRound = 1;
+    private String curretSecretWord;
     // to manage timer in each thread, server we use  the ScheduledExecutorService class 
     // to handle the synchronization of time update to all clients in a single thread so it will not blocks the server thread
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> timerTask; // reference to cancel the timer
-    private final int DRAWING_TIME = 10;
-    private final int CHOOSING_WORD_TIME = 10;
-    private final int ANNOUNCING_TIME = 5;
+    private final int DRAWING_TIME = 20;
+    private final int CHOOSING_WORD_TIME = 5;
+    private final int PLAYERS_ANNOUNCING_TIME = 5;
+    private final int ROUND_ANNOUNCING_TIME = 3;
+   
+ 
     
     
 
     public GameServer() {
         players = new ArrayList<>();
-        
+        wordDictionary = new WordDictionary();
     }
     
     private void startServer(){
@@ -64,7 +71,7 @@ public class GameServer {
         if(players.size() > 1 && host.getHostStatus() != false){
             host.notifyPlayer("HOST-COMMAND,GAME-STARTED");
             // method to start the game
-            startTurn(players.size() - 1);
+            startAnnouncingRoundPhase();
         }
         else{
             // send the message to specific client
@@ -72,46 +79,183 @@ public class GameServer {
         }
     }
     
-    private void startTurn(int turns){
-        // the turns is in descending
-        currentPlayerIndexTurn = turns;
-        int[] remainingTime = {DRAWING_TIME}; // Mutable array to track remaining time
-        // get the client object
-        ClientHandlerGame player = players.get(currentPlayerIndexTurn);
-        
-        System.out.println(player.getUsername()+ " turn!  INDEX: " +currentPlayerIndexTurn);
-        
-        broadcastMessage("TURN-DRAW,"+player.getPlayerID());
-        // broadcast to all cleints whose turn it is
-        broadcastMessage("ANNOUNCEMENT,TURN,"+player.getUsername()+" is now drawing!",player);
-        
-        // schedule a task to broadcast the remaining time every second
-        timerTask =  timer.scheduleAtFixedRate(() -> {
-           
+    private void startAnnouncingRoundPhase(){
+        if(onePlayerLeft()){
+            System.out.println("Game stopped before taking turns");
+            // broadcast a message to clients to update their interface that the game stopped
+            broadcastMessage("GAME-STOPPED");
+            if (timerTask != null) {
+                timerTask.cancel(false); // Ensure any ongoing timer is stopped
+            }
+            return; // exit this method
+        }
+        int[] remainingTime = {ROUND_ANNOUNCING_TIME};
+        System.out.println("Round : " + currentRound + "Starting");
+        // broadcast to all clients what round it is
+        broadcastMessage("ROUND-STATE,ROUND "+currentRound+",Round "+currentRound+" out of 3");
+        // announce it for three seconds
+        timerTask = timer.scheduleAtFixedRate(() -> {
             if(remainingTime[0] > 0){
-                // broadcast the timer updates 
-                broadcastMessage("TIMER,"+remainingTime[0]);
-                remainingTime[0]--; // decrement the element value 
+                // broadcast time update
+                broadcastMessage("TIMER-ROUND-STATE," + remainingTime[0]);
+                System.out.println("Timer round state: " + remainingTime[0]);
+                remainingTime[0]--;
             }
             else{
-                timerTask.cancel(false); // Stop this task to prevent task overlapping 
-                endPlayerTurn(); // invoke next turn if timer ended
+                timerTask.cancel(false);
+                broadcastMessage("REMOVE-DIALOG-ROUND");
+                startTurn(players.size() - 1); // start turn after timer
+            }
+        
+        }, 0,1, TimeUnit.SECONDS);
+        
+        
+    }
+    
+    private void startTurn(int turns){
+        // check if more than one player currently in the game before turns
+        if(onePlayerLeft()){
+            System.out.println("Game stopped before taking turns");
+            // broadcast a message to clients to update their interface that the game stopped
+            broadcastMessage("GAME-STOPPED");
+            if (timerTask != null) {
+                timerTask.cancel(false); // Ensure any ongoing timer is stopped
+            }
+            return; // exit this method
+        }
+        
+        System.out.println("Start turn..");
+        // the turns is in descending
+        currentPlayerIndexTurn = turns;
+        
+        // get the client object
+        ClientHandlerGame player = players.get(currentPlayerIndexTurn);
+        System.out.println(player.getUsername() + " turn!  INDEX: " + currentPlayerIndexTurn);
+        player.setTurnStatus(true); // turn status to true
+        // set to 0 so that the drawing tools is not visible to anyone before word choosing
+        broadcastMessage("TURN-DRAW," + 0);
+        // start the word choosing phase
+        startWordChoosingPhase(player);
+        
+    }
+    
+    private void startWordChoosingPhase(ClientHandlerGame player){
+        // check if more than one player currently in the game before turns
+        if(onePlayerLeft()){
+            System.out.println("Game stopped before taking turns");
+            // broadcast a message to clients to update their interface that the game stopped
+            broadcastMessage("GAME-STOPPED");
+            if (timerTask != null) {
+                timerTask.cancel(false); // Ensure any ongoing timer is stopped
+            }
+            return; // exit this method
+        }
+        System.out.println("word choosing phase starts..");
+        
+        int[] remainingTime = {CHOOSING_WORD_TIME};
+        // broadcast to all cleints whose turn it is
+        broadcastMessage("ANNOUNCEMENT,TURN,Server is now choosing a word for "+ player.getUsername());
+        broadcastMessage("WORD-CHOOSING-STATE,Server is now choosing a word for "+ player.getUsername(),player);
+        player.notifyPlayer("SERVER-CHOOSING-WORD,Server is now choosing a word for You");
+        // schedule a task to broadcast the remaining time every second
+        timerTask = timer.scheduleAtFixedRate(() -> {
+            // check if only one player left each second of the timer 
+            if(onePlayerLeft()){
+                System.out.println("Game stopped! mid-turn, one player left");
+                // broadcast an update to clients
+                broadcastMessage("GAME-STOPPED");
+                timerTask.cancel(false);
+                return; // exit this method
             }
             
-        },0,1,TimeUnit.SECONDS); // Initial delay 0, repeat every 1 second
+            if (remainingTime[0] > 0) {
+                // broadcast the timer updates 
+                broadcastMessage("TIMER-WORD-CHOOSING," + remainingTime[0]);
+                System.out.println("Timer word choosing state: " + remainingTime[0]);
+                remainingTime[0]--; // decrement the element value 
+
+            } else {
+                timerTask.cancel(false); // Stop this task to prevent task overlapping
+                curretSecretWord = wordDictionary.serverGetRandomWord();
+                broadcastMessage("REMOVE-DIALOG-WORD");
+                System.out.println("Random word is: " + curretSecretWord);
+                broadcastMessage("SECRET-WORD,"+maskSecretWord(curretSecretWord), player); // send the masked word to player
+                player.notifyPlayer("CHOSEN-WORD,"+curretSecretWord); // send the word to current turn player
+                // invoke drawing phase if user does not choose a word
+                startDrawingPhase(player);
+            }
+
+        }, 0, 1, TimeUnit.SECONDS); // Initial delay 0, repeat every 1 second
+
+    
+    }
+    
+    
+    public void startDrawingPhase(ClientHandlerGame player){
+        if(onePlayerLeft()){
+            System.out.println("Game stopped before taking turns");
+            // broadcast a message to clients to update their interface that the game stopped
+            broadcastMessage("GAME-STOPPED");
+            if (timerTask != null) {
+                timerTask.cancel(false); // Ensure any ongoing timer is stopped
+            }
+            return; // exit this method
+        }
+        int[] remainingTime = {DRAWING_TIME};
+        System.out.println("Drawing phase starts...");
+        broadcastMessage("TURN-DRAW," + player.getPlayerID()); // broadcast to all clients whose player id turn
+        broadcastMessage("ANNOUNCEMENT,TURN," + player.getUsername() + " is now drawing!");
+        // schedule a task to broadcast the remaining time every second
+        timerTask = timer.scheduleAtFixedRate(() -> {
+            // check if only one player left each second of the timer 
+            if(onePlayerLeft()){
+                System.out.println("Game stopped! mid-turn, one player left");
+                // broadcast an update to clients
+                broadcastMessage("GAME-STOPPED");
+                timerTask.cancel(false);
+                return; // exit this method
+            }
+            
+            if (remainingTime[0] > 0) {
+                // broadcast the timer updates 
+                broadcastMessage("TIMER-DRAW," + remainingTime[0]);
+                System.out.println("Timer drawing state: " + remainingTime[0]);
+                remainingTime[0]--; // decrement the element value 
+
+            } else {
+                timerTask.cancel(false); // Stop this task to prevent task overlapping 
+                broadcastMessage("CLEAR-DRAWING"); // clear panel after timer ended
+                endPlayerTurn(); // invoke next turn if timer ended
+            }
+
+        }, 0, 1, TimeUnit.SECONDS); // Initial delay 0, repeat every 1 second
+    
     }
     
     private void endPlayerTurn(){
-       // this would announce the scoring and then invoke the start Turn again
-       if(currentPlayerIndexTurn > 0){
-           currentPlayerIndexTurn -= 1; // decrement the player index to 1
-       }
-       else{
-           System.out.println("new round");
-           currentPlayerIndexTurn = players.size() - 1; // reset the turns
-       }
+        System.out.println("End turn.. resetting turn");
+        // this would announce the scoring and then invoke the start Turn again
+        if (currentPlayerIndexTurn > 0) {
+            currentPlayerIndexTurn -= 1; // decrement the player index to 1
+            // start new turns
+            startTurn(currentPlayerIndexTurn);
+        } else {
+            System.out.println("New round");
+            currentRound++;
+            startAnnouncingRoundPhase(); // announce the round
+        }
+        
        
-       startTurn(currentPlayerIndexTurn);
+    }
+    
+    private String maskSecretWord(String word){
+        String mask = "";
+        for(int i = 0; i < word.length(); i++){
+            mask += "_ ";
+        }
+        
+        return mask;
+        
     }
     
     private void assignPlayerHost(){
@@ -134,6 +278,15 @@ public class GameServer {
         return true;
     }
     
+    public void stopTimer(){
+        timerTask.cancel(false);
+    }
+    
+    // check if one player only
+    private boolean onePlayerLeft(){
+       
+        return players.size() <= 1;
+    }
     
     
     // broadcast message from other clients
@@ -166,14 +319,13 @@ public class GameServer {
         
         // update the scoreboard (player list)
         broadcastClientList();
-       
-        
+    
     }
     
     // remove player from the list
     public void removeClientHandler(ClientHandlerGame player){
         broadcastMessage("ANNOUNCEMENT,LEFT,"+player.getUsername()+" left the game!");
-       
+        System.out.println(player.getUsername() + " left the game");
         players.remove(player);
         // reassign host if the player who left is the host
         assignPlayerHost();
@@ -218,6 +370,5 @@ public class GameServer {
     }
     
     
-   
     
 }

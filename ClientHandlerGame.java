@@ -19,6 +19,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     public PrintWriter writer;
     public BufferedReader reader;
     private GameServer gameServer;
+    private boolean isTurn;
     
 
     public ClientHandlerGame(Socket socket, GameServer gameServer) {
@@ -31,6 +32,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
             this.username = reader.readLine();
             this.score = 0;
             this.isHost = false;
+            this.isTurn = false;
             this.playerID = createID();
             writer.println(this.playerID); // send the id to the corresponding client thread
             // add the client to the arraylist
@@ -58,21 +60,11 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         String[] message = messageFromClient.split(",");
         
         switch(message[0]){
-            case "DRAWING":
-                gameServer.broadcastMessage(messageFromClient, this);
-                break;
-            case "GUESS":
-                gameServer.broadcastMessage(messageFromClient);
-                break;
-            case "CLEAR-DRAWING":
-                gameServer.broadcastMessage(messageFromClient, this);
-                break;
-            case "UNDO-DRAWING":
-                gameServer.broadcastMessage(messageFromClient, this);
-                break;
-            case "START-GAME":
-                gameServer.startGame(messageFromClient, this);
-                break;
+            case "DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            case "GUESS" -> gameServer.broadcastMessage(messageFromClient);
+            case "CLEAR-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            case "UNDO-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            case "START-GAME" -> gameServer.startGame(messageFromClient, this);
         }
         
     }
@@ -143,6 +135,10 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         return isHost;
     }
     
+    public boolean getIsTurnStatus(){
+        return isTurn;
+    }
+    
     public void setUsername(String username){
         this.username = username;
     }
@@ -153,6 +149,10 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     
     public void setHostStatus(boolean status){
         this.isHost = status;
+    }
+    
+    public void setTurnStatus(boolean status){
+        this.isTurn = status;
     }
     
     

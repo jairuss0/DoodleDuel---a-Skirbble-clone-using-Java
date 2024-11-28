@@ -1,19 +1,15 @@
-    
 package skribbl_clone;
 
 import java.io.IOException;
 import java.net.Socket;
 import javax.swing.SwingUtilities;
 
- 
 public class GameMenu extends javax.swing.JFrame {
 
-   
     public GameMenu() {
         initComponents();
     }
 
-  
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -29,6 +25,11 @@ public class GameMenu extends javax.swing.JFrame {
         jPanel1.setBackground(new java.awt.Color(0, 65, 108));
 
         jTextField2.setToolTipText("Enter your name");
+        jTextField2.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                jTextField2KeyPressed(evt);
+            }
+        });
 
         jButton1.setBackground(new java.awt.Color(115, 239, 115));
         jButton1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
@@ -39,12 +40,17 @@ public class GameMenu extends javax.swing.JFrame {
                 jButton1ActionPerformed(evt);
             }
         });
+        jButton1.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                jButton1KeyPressed(evt);
+            }
+        });
 
         jLabel1.setBackground(new java.awt.Color(0, 0, 0));
         jLabel1.setFont(new java.awt.Font("Comic Sans MS", 1, 48)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("DoodleMeThis!");
+        jLabel1.setText("DoodleDuel");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -89,11 +95,40 @@ public class GameMenu extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-  
-        if(!jTextField2.getText().equals("Enter your name") || !jTextField2.getText().equals("")){
-            
+
+        if (!jTextField2.getText().equals("Enter your name") || !jTextField2.getText().isEmpty()) {
+
             String username = jTextField2.getText();
-            SwingUtilities.invokeLater(() -> {
+
+            try {
+                // create socket object with the server ip and the server port that is listening to
+                Socket socket = new Socket("localhost", 1234);
+                GameClient gameClient = new GameClient(socket, username);
+                gameClient.setVisible(true);
+                gameClient.setLocationRelativeTo(null);
+                // method to listen for the incoming messages
+                gameClient.listenForMessage();
+            } catch (IOException e) {
+                System.err.print(e);
+            }
+
+            this.dispose();
+        } else {
+            // add some jOption warning here
+        }
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jButton1KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jButton1KeyPressed
+        
+        
+    }//GEN-LAST:event_jButton1KeyPressed
+
+    private void jTextField2KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextField2KeyPressed
+        if(evt.getKeyCode() == 10){
+            if (!jTextField2.getText().equals("Enter your name") || !jTextField2.getText().isEmpty()) {
+
+                String username = jTextField2.getText();
+
                 try {
                     // create socket object with the server ip and the server port that is listening to
                     Socket socket = new Socket("localhost", 1234);
@@ -105,17 +140,15 @@ public class GameMenu extends javax.swing.JFrame {
                 } catch (IOException e) {
                     System.err.print(e);
                 }
-                
-            });
-            
-            this.dispose();
-        }
-        else{
-            // add some jOption warning here
-        }
-    }//GEN-LAST:event_jButton1ActionPerformed
 
-    
+                this.dispose();
+            } else {
+                // add some jOption warning here
+            }
+        }
+    }//GEN-LAST:event_jTextField2KeyPressed
+
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;

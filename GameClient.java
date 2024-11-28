@@ -10,8 +10,12 @@ import java.awt.event.MouseMotionListener;
 import java.io.*;
 import java.net.*;
 import java.util.Stack;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
@@ -28,7 +32,6 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private BufferedReader reader;
     private PrintWriter writer;
     private boolean canDraw = false;
-    private int timerCount;
     // List to store drawPoint object 
     private Stack<DrawPoint> drawingPoint;
     private DrawPoint drawPoint;
@@ -46,10 +49,12 @@ public class GameClient extends JFrame implements MouseMotionListener {
     Point point; 
     Color color;
     StringBuilder scoreboardStringBuilder;
+    JDialog roundDialog, serverChoosingWordDialog;
    
     
     public GameClient(Socket socket, String username) {
-       
+        roundDialog = new JDialog(this, "SERVER: ", true); // create
+        serverChoosingWordDialog = new JDialog(this, "SERVER: ",true);
         this.brushSize = 10; // initialize brush size to 10
         this.brushColor = Color.black; // initialize color to 10
         this.drawingPoint = new Stack<>();
@@ -74,11 +79,14 @@ public class GameClient extends JFrame implements MouseMotionListener {
             canDraw = true;
             enableDrawingTools();
             drawingPanelFunctionality();
+            // disable the textfield
+            chatInpuTextField.setEditable(false);
         }
         else{
             canDraw = false;
             disableDrawingTools();
             drawingPanelFunctionality();
+            chatInpuTextField.setEditable(true);
         }
         System.out.println(username + " ability to draw: " + canDraw);
     }
@@ -129,10 +137,10 @@ public class GameClient extends JFrame implements MouseMotionListener {
     
     // send client's message to server
     public void sendMessage(){
-        String message = jTextField1.getText().trim();
+        String message = chatInpuTextField.getText().trim();
         if (!message.isEmpty()) {
-            jTextField1.setText("");  // Clear the text field
-            writer.println("GUESS,"+username + ":, " + message);  // Send message to the server
+            chatInpuTextField.setText("");  // Clear the text field
+            writer.println("GUESS,"+username + ":, " + message+","+message);  // Send message to the server
         }
             
     }
@@ -166,55 +174,92 @@ public class GameClient extends JFrame implements MouseMotionListener {
         String[] message = receivedMessage.split(",");
        
         switch(message[0]){
-            case "ANNOUNCEMENT":
-                // listens to game state
+            case "ANNOUNCEMENT" -> // listens to game state
                 evaluateAnnouncementMessage(message);
-                break;
-            case "GUESS":
-                // listens to other players chats (their guesses)
+            case "GUESS" -> // listens to other players chats (their guesses)
                 evaluateClientMessage(message);
-                break;
-            case "DRAWING":
-                // listens to the player who is drawing
+            case "DRAWING" -> // listens to the player who is drawing
                 evaluateClientDrawingPoints(message);
-                break;
-            case "CLEAR-DRAWING":
-                // clear client-side drawing panel
+            case "CLEAR-DRAWING" -> // clear client-side drawing panel
                 clearDrawingPanel();
-                break;
-            case "UNDO-DRAWING":
-                // undo drawing
+            case "UNDO-DRAWING" -> // undo drawing
                 undoDrawingPanel();
-                break;
-            case "TURN-DRAW":
-                // check if the player's turn to draw to enable the draw tools otherwise disable it
+            case "TURN-DRAW" -> // check if the player's turn to draw to enable the draw tools otherwise disable it
                 turnToDraw(Integer.parseInt(message[1]));
-                break;
-            case "TIMER": // update timer coming from the server
+            case "TIMER-DRAW" -> // update timer coming from the server
                 updateTimer(message[1]);
-                break;
-            case "HOST-STATUS":
+            case "HOST-STATUS" -> {
                 hostStatus = true;
                 showHostBtn();
-                break;
-            case "HOST-COMMAND":
+            }
+            case "HOST-COMMAND" -> {
                 System.out.println(message[1]);
                 if(message[1].equals("GAME-STARTED")){
                     hideHostBtn();
                 }
-                break;
+            }
+            case "ROUND-STATE" -> showRoundDialog(message);
+            case "TIMER-ROUND-STATE" -> updateTimer(message[1]);
+            case "TIMER-WORD-CHOOSING" -> updateTimer(message[1]);
+            case "WORD-CHOOSING-STATE" -> showGameStateDialog(message);
+            case "SERVER-CHOOSING-WORD" -> showGameStateDialog(message);
+            case "SECRET-WORD" -> secretWordLabel.setText(message[1]);
+            case "CHOSEN-WORD" -> secretWordLabel.setText(message[1]);
+            case "REMOVE-DIALOG-ROUND" -> roundDialog.dispose();
+            case "REMOVE-DIALOG-WORD" -> serverChoosingWordDialog.dispose();
+            case "GAME-STOPPED" -> {
+                updateTimer("0");
+                showHostBtn();
+            }
+          
                 
         }
         
     }
     
+    private void showRoundDialog(String[] message){
+        // use the swingUtilities.invokeLater to prevent the GUI freeze and
+        // update the gui on separate thread 
+        SwingUtilities.invokeLater(() -> {
+            JLabel label = new JLabel();
+            label.setText(message[1]);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            roundDialog.add(label);
+            roundDialog.setSize(250, 150);
+            roundDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
+            roundDialog.setVisible(true);
+            roundLabel.setText(message[2]);
+        });
+        
+    }
+    
+    private void showGameStateDialog(String[] message){
+        // use the swingUtilities.invokeLater to prevent the GUI freeze and
+        // update the gui on separate thread 
+        SwingUtilities.invokeLater(() -> {
+            JLabel label = new JLabel();
+            label.setText(message[1]);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            serverChoosingWordDialog.add(label);
+            serverChoosingWordDialog.setSize(250, 150);
+            serverChoosingWordDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
+            serverChoosingWordDialog.setVisible(true);
+        });
+    
+    }
+    
+    
+    
     // determine to hide or unhide the start button
     private void hideHostBtn(){
         startGameBtn.setVisible(false);
-        //startGameBtn.setEnabled(false);
+        
     }
     private void showHostBtn(){
-        startGameBtn.setVisible(true);
+        if(hostStatus){
+            startGameBtn.setVisible(true);
+        }
+        
     }
     // check if messages received is player list (this is for scoreboard)
     private void checkIfScoreboardMessage(String message){
@@ -301,7 +346,8 @@ public class GameClient extends JFrame implements MouseMotionListener {
     
     private void updateTimer(String seconds){
         // update the timer label
-        SwingUtilities.invokeLater(() -> timerLabel.setText(seconds));
+        SwingUtilities.invokeLater(() -> 
+                timerLabel.setText(seconds));
     }
     
     // undo drawing
@@ -346,7 +392,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
 
         };
         //  -- added paintComponent method for the drawing functionality);
-    jTextField1 = new javax.swing.JTextField();
+    chatInpuTextField = new javax.swing.JTextField();
     gameStatusPanel = new javax.swing.JPanel();
     timerLabel = new javax.swing.JLabel();
     roundLabel = new javax.swing.JLabel();
@@ -374,6 +420,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     clearBtn = new javax.swing.JButton();
     UndoBtn = new javax.swing.JButton();
     startGameBtn = new javax.swing.JButton();
+    panelDialog = new javax.swing.JPanel();
 
     setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
     setTitle("DoodleDuel");
@@ -396,15 +443,15 @@ public class GameClient extends JFrame implements MouseMotionListener {
         .addGap(0, 506, Short.MAX_VALUE)
     );
 
-    jTextField1.setToolTipText("Type here...");
-    jTextField1.addActionListener(new java.awt.event.ActionListener() {
+    chatInpuTextField.setToolTipText("Type here...");
+    chatInpuTextField.addActionListener(new java.awt.event.ActionListener() {
         public void actionPerformed(java.awt.event.ActionEvent evt) {
-            jTextField1ActionPerformed(evt);
+            chatInpuTextFieldActionPerformed(evt);
         }
     });
-    jTextField1.addKeyListener(new java.awt.event.KeyAdapter() {
+    chatInpuTextField.addKeyListener(new java.awt.event.KeyAdapter() {
         public void keyPressed(java.awt.event.KeyEvent evt) {
-            jTextField1KeyPressed(evt);
+            chatInpuTextFieldKeyPressed(evt);
         }
     });
 
@@ -421,7 +468,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     roundLabel.setToolTipText("");
 
     secretWordLabel.setBackground(new java.awt.Color(255, 255, 255));
-    secretWordLabel.setFont(new java.awt.Font("Segoe UI Emoji", 0, 18)); // NOI18N
+    secretWordLabel.setFont(new java.awt.Font("Comic Sans MS", 0, 24)); // NOI18N
     secretWordLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
     secretWordLabel.setText("WORD");
 
@@ -678,18 +725,24 @@ public class GameClient extends JFrame implements MouseMotionListener {
         }
     });
 
+    panelDialog.setLayout(new javax.swing.OverlayLayout(panelDialog));
+
     javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
     jPanel1.setLayout(jPanel1Layout);
     jPanel1Layout.setHorizontalGroup(
         jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
         .addGroup(jPanel1Layout.createSequentialGroup()
             .addGap(33, 33, 33)
-            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addComponent(gameStatusPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
-                        .addComponent(startGameBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
+                            .addComponent(startGameBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addGap(6, 6, 6)
+                            .addComponent(panelDialog, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGap(18, 18, 18)
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(DrawingPanelTools, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -697,7 +750,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addComponent(chatInpuTextField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE))))
             .addContainerGap(37, Short.MAX_VALUE))
     );
     jPanel1Layout.setVerticalGroup(
@@ -708,22 +761,26 @@ public class GameClient extends JFrame implements MouseMotionListener {
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
             .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGap(55, 55, 55)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 321, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addGap(55, 55, 55)
+                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 321, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(chatInpuTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGap(18, 18, 18)
+                    .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(jPanel1Layout.createSequentialGroup()
                     .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 450, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(startGameBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)))
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-            .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addContainerGap(45, Short.MAX_VALUE))
+                    .addComponent(startGameBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(panelDialog, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+            .addContainerGap(35, Short.MAX_VALUE))
     );
 
     drawingPanel.getAccessibleContext().setAccessibleName("");
-    jTextField1.getAccessibleContext().setAccessibleName("");
+    chatInpuTextField.getAccessibleContext().setAccessibleName("");
     gameStatusPanel.getAccessibleContext().setAccessibleName("gameDetailsPanel");
 
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -734,23 +791,23 @@ public class GameClient extends JFrame implements MouseMotionListener {
     );
     layout.setVerticalGroup(
         layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 786, Short.MAX_VALUE)
+        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 788, Short.MAX_VALUE)
     );
 
     pack();
     }// </editor-fold>//GEN-END:initComponents
     
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
+    private void chatInpuTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chatInpuTextFieldActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
+    }//GEN-LAST:event_chatInpuTextFieldActionPerformed
         // send message if user pressed enter
-    private void jTextField1KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextField1KeyPressed
+    private void chatInpuTextFieldKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_chatInpuTextFieldKeyPressed
        
         // invoke the send message function if user press enter key
         if(evt.getKeyCode() == 10){
             sendMessage();
         }
-    }//GEN-LAST:event_jTextField1KeyPressed
+    }//GEN-LAST:event_chatInpuTextFieldKeyPressed
 
     private void UndoBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_UndoBtnActionPerformed
         undoDrawingPanel();
@@ -863,6 +920,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private javax.swing.JButton brownBtn;
     private javax.swing.JLabel brushSizeLabel;
     private javax.swing.JSlider brushSizeSlider;
+    private javax.swing.JTextField chatInpuTextField;
     private javax.swing.JTextPane chatPane;
     private javax.swing.JButton clearBtn;
     private javax.swing.JPanel colorsBtnPanel;
@@ -874,9 +932,9 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
-    private javax.swing.JTextField jTextField1;
     private javax.swing.JButton magentaBtn;
     private javax.swing.JButton orangeBtn;
+    private javax.swing.JPanel panelDialog;
     private javax.swing.JButton pinkBtn;
     private javax.swing.JButton redBtn;
     private javax.swing.JLabel roundLabel;
