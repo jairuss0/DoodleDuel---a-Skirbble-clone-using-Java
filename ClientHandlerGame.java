@@ -61,7 +61,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         
         switch(message[0]){
             case "DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
-            case "GUESS" -> gameServer.broadcastMessage(messageFromClient);
+            case "GUESS" -> gameServer.evaluateGuess(messageFromClient, this);
             case "CLEAR-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
             case "UNDO-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
             case "START-GAME" -> gameServer.startGame(messageFromClient, this);
