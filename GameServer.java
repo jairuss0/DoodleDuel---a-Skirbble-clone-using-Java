@@ -6,6 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.concurrent.*;
 
 
@@ -21,15 +22,16 @@ public class GameServer {
     private final int MAX_ROUND = 3;
     private final int MAX_PLAYERS = 10;
     private int currentRound = 1;
-    private String currentSecretWord;
+    private String currentSecretWord = "";
     // to manage timer in each thread, server we use  the ScheduledExecutorService class 
     // to handle the synchronization of time update to all clients in a single thread so it will not blocks the server thread
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> timerTask; // reference to cancel the timer
-    private final int DRAWING_TIME = 20;
+    private final int DRAWING_TIME = 10;
     private final int CHOOSING_WORD_TIME = 5;
-    private final int REVEAL_WORD_TIME = 3;
+    private final int REVEAL_WORD_TIME = 5;
     private final int ROUND_ANNOUNCING_TIME = 3;
+    private final int RANK_ANNOUNCING_TIME = 15;
     private int correct_guesses = 0;
     private boolean gameStarted = false;
  
@@ -39,6 +41,7 @@ public class GameServer {
     public GameServer() {
         players = new ArrayList<>();
         wordDictionary = new WordDictionary();
+        drawHistory = new ArrayList<>();
     }
     
     private void startServer(){
@@ -168,10 +171,10 @@ public class GameServer {
         
         int[] remainingTime = {CHOOSING_WORD_TIME};
         // broadcast to all cleints whose turn it is
-        broadcastMessage("ANNOUNCEMENT,TURN,Server is now choosing a word for "+ player.getUsername());
-        broadcastMessage("WORD-CHOOSING-STATE,Server is now choosing a word for "+ player.getUsername(),player);
-        player.notifyPlayer("SERVER-CHOOSING-WORD,Server is now choosing a word for You");
-        broadcastClientList(); // update the player list to display who is turn to draw
+        broadcastMessage("ANNOUNCEMENT,TURN,Server is now choosing a word for "+ player.getUsername() + "!");
+        broadcastMessage("WORD-CHOOSING-STATE,Server is now choosing a word for '"+ player.getUsername()+"'",player);
+        player.notifyPlayer("SERVER-CHOOSING-WORD,Server is now choosing a word for YOU");
+        broadcastClientList("PLAYER-LIST:"); // update the player list to display who is turn to draw
         // schedule a task to broadcast the remaining time every second
         timerTask = timer.scheduleAtFixedRate(() -> {
             // check if only one player left each second of the timer 
@@ -236,7 +239,8 @@ public class GameServer {
             }
             
             if (remainingTime[0] > 0) {
-                // broadcast the timer updates 
+                revealClue(remainingTime[0]); // reveal clue if under 45 seconds
+                // broadcast the timer updates
                 broadcastMessage("TIMER-DRAW," + remainingTime[0]);
                 System.out.println("Timer drawing state: " + remainingTime[0]);
                 remainingTime[0]--; // decrement the element value 
@@ -245,8 +249,9 @@ public class GameServer {
                 timerTask.cancel(false); // Stop this task to prevent task overlapping 
                 broadcastMessage("CLEAR-DRAWING"); // clear panel after timer ended
                 player.setTurnStatus(false); // set the turn status to false;
-                broadcastClientList(); // send the updated player list
+                broadcastClientList("PLAYER-LIST:"); // send the updated player list
                 revealSecretWordPhase(); // invoke next turn if timer ended
+                drawHistory.clear(); // clear the drawing point history
             }
 
         }, 0, 1, TimeUnit.SECONDS); // Initial delay 0, repeat every 1 second
@@ -305,16 +310,57 @@ public class GameServer {
             // start new turns
             startTurn(currentPlayerIndexTurn);
         } else {
-            System.out.println("New round");
             currentRound++;
             timerTask.cancel(false); // ensure to stop any timer task 
+            // check if round hit the max round
+            if(currentRound > 3 ){
+                System.out.println("Round maxed out!");
+                announceWinner();
+            }
+            else{
+                System.out.println("New round");
+                startAnnouncingRoundPhase(); // announce the round
+            }
             
-            startAnnouncingRoundPhase(); // announce the round
         }
         
        
     }
     
+    private void announceWinner(){
+       
+        int[] remainingTime = {RANK_ANNOUNCING_TIME};
+        System.out.println("Rank announcing phase...");
+        broadcastMessage("TURN-DRAW," + 0); // hide the drawing tools to all players
+        broadcastClientList("RANK-LIST:"); // broadcast players details
+        System.out.println("WINNER,The Winner is "+ getWinnerUsername()+"!");
+        broadcastClientList("WINNER,The Winner is "+ getWinnerUsername()+"!");
+        // schedule a task to broadcast the remaining time every second
+        timerTask = timer.scheduleAtFixedRate(() -> {
+            
+            if (remainingTime[0] > 0) {
+                // broadcast the timer updates 
+                broadcastMessage("TIMER-RANK-ANNOUNCE," + remainingTime[0]);
+                System.out.println("Timer rank announce state: " + remainingTime[0]);
+                remainingTime[0]--; // decrement the element value 
+
+            } else {
+                timerTask.cancel(false); // Stop this task to prevent task overlapping 
+                broadcastMessage("REMOVE-RANK-ANNOUNCE-DIALOG");
+                broadcastMessage("GAME-STOPPED"); // reset the players game state
+                resetGame(); // reset the server game state
+            }
+
+        }, 0, 1, TimeUnit.SECONDS); // Initial delay 0, repeat every 1 second
+    }
+    
+    // reveal clue letter to players depending on the seconds left
+    private void revealClue(int seconds){
+        if(seconds < 10){
+            
+        }
+    }
+    // mask the secret word
     private String maskSecretWord(String word){
         String mask = "";
         for(int i = 0; i < word.length(); i++){
@@ -337,18 +383,22 @@ public class GameServer {
             broadcastMessage("ANNOUNCEMENT,GUESS,"+player.getUsername()+" Guessed the Word!");
             player.notifyPlayer("GUESSED,"+currentSecretWord); // reveal the word to the player
             correct_guesses++;
-            
+            broadcastClientList("PLAYER-LIST:"); // broadcast updated player list
             // end the turn if all players guessed the secret word
             if(correct_guesses == (players.size() - 1)){
+                broadcastMessage("CLEAR-DRAWING"); // clear panel if all players were guessed correctly
                 System.out.println("all players guessed the word!");
                 timerTask.cancel(false);
                 drawer.setTurnStatus(false);
-                broadcastClientList(); // broadcast updated player list
+                broadcastMessage("CLEAR-DRAWING"); // clear players drawing interface 
+                drawHistory.clear(); // clear draw history
+                broadcastClientList("PLAYER-LIST:"); // broadcast updated player list
                 revealSecretWordPhase();
             }
             
         }
         else{
+            // if player guess were wrong, it would be broadcasted
             broadcastMessage(guessFromClient);
             System.out.println("test secretword: " + currentSecretWord);
             System.out.println("test guess: " + message[2]);
@@ -395,6 +445,13 @@ public class GameServer {
     
     }
     
+    private String getWinnerUsername(){
+        // return the player with the highest score
+        // for each player in the list comparator call the getScore and compares it to each player
+        ClientHandlerGame playerWinner = Collections.max(players,Comparator.comparingInt(ClientHandlerGame::getScore)); 
+        return playerWinner.getUsername();
+    }
+    
     // assign a player host 
     private void assignPlayerHost(){
         // assign a host if there is no host
@@ -403,7 +460,8 @@ public class GameServer {
             host.setHostStatus(true);
             host.notifyPlayer("HOST-STATUS,OUT-GAME");
             broadcastMessage("ANNOUNCEMENT,SERVER,"+host.getUsername()+" is the Host! "); // broadcast who is the host
-        }
+        } // a seperate assigning condition to prevent disrupting the game by not displaying the host button
+        // in the middle of the game
         else if(!players.isEmpty() && noHostAvailable() && gameStarted){
             ClientHandlerGame host = players.get(0); // set player as host the current first player in the list
             host.setHostStatus(true);
@@ -424,18 +482,18 @@ public class GameServer {
     }
     // reset game state values
     public void resetGame(){
-        //drawHistory.clear();
+        drawHistory.clear();
+        broadcastMessage("CLEAR-DRAWING");
         currentRound = 1;
         correct_guesses = 0;
-        broadcastMessage("CLEAR-DRAWING");
         gameStarted = false;
+        currentSecretWord = "";
         removeTurnStatus();
-        broadcastClientList();
+        broadcastClientList("PLAYER-LIST:");
     }
     
     // check if one player only
     private boolean onePlayerLeft(){
-       
         return players.size() <= 1;
     }
     
@@ -444,10 +502,9 @@ public class GameServer {
             player.setTurnStatus(false);
             player.setScore(0); // reset the score also
         }
-       
     }
     
-    // broadcast message from other clients
+    // broadcast message to other clients
     public void broadcastMessage(String messageFromClient,ClientHandlerGame client){
         for(ClientHandlerGame player : players){
             // exclude the sender
@@ -469,15 +526,30 @@ public class GameServer {
 
     // add player to the list
     public void addClientHandler(ClientHandlerGame player){
-        
         players.add(player);
         broadcastMessage("ANNOUNCEMENT,JOIN,"+player.getUsername()+" joined the game!",player);
+        if(gameStarted){
+            System.out.println(player.getUsername() + " joined in the middle of the Game!");
+            // broadcast the round status and the current secret word
+            player.notifyPlayer("ON-GOING-JOINED,Round "+currentRound+" out of 3");
+            player.notifyPlayer("SECRET-WORD,"+maskSecretWord(currentSecretWord));
+            // send the drawing history to player
+            sendDrawingHistory(player);
+        }
         // assign player host
         assignPlayerHost();
-        
         // update the scoreboard (player list)
-        broadcastClientList();
+        broadcastClientList("PLAYER-LIST:");
     
+    }
+    
+    private void sendDrawingHistory(ClientHandlerGame player){
+        if(!drawHistory.isEmpty()){
+            for (String drawingHistory : drawHistory) {
+                player.notifyPlayer(drawingHistory);
+            }
+        }
+     
     }
     
     // remove player from the list
@@ -494,10 +566,11 @@ public class GameServer {
         // reassign host if the player who left is the host
         assignPlayerHost();
         // update the scoreboard (player list)
-        broadcastClientList();
+        broadcastClientList("PLAYER-LIST:");
     }
+    
     // broadcast to each player the details of all players
-    public void broadcastClientList(){
+    public void broadcastClientList(String typeOfList){
         playerDetails = new ArrayList<>();
         
         // ensure the thread safety when trying to access the list just like the drawing point
@@ -515,13 +588,14 @@ public class GameServer {
         
         // send the string arraylist of player details in each client
         for(ClientHandlerGame player: players){
-            player.sendPlayerList(playerDetails);
+            player.sendPlayerList(typeOfList,playerDetails);
         }
     }
     
-    public void addDrawingPointHistory(){
-        
+    public void addDrawingPointHistory(String drawingPoint){
+        drawHistory.add(drawingPoint);
     }
+   
     
     
     // close server socket

@@ -60,10 +60,18 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         String[] message = messageFromClient.split(",");
         
         switch(message[0]){
-            case "DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            // this is for drawing points coming from one of the clients
+            case "DRAWING" -> {
+                gameServer.broadcastMessage(messageFromClient, this);
+                gameServer.addDrawingPointHistory(messageFromClient.trim()); // add drawing history
+            }
+            // a guess or the messages coming from the chat
             case "GUESS" -> gameServer.evaluateGuess(messageFromClient, this);
+            // a command to clear each clients drawing panel
             case "CLEAR-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            // to undo certain drawing point to each clients
             case "UNDO-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            // a command sent by the client that is host
             case "START-GAME" -> gameServer.startGame(messageFromClient, this);
         }
         
@@ -107,8 +115,8 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     }
     
     // send the players data in string format 
-    public void sendPlayerList(ArrayList<String> playerData){
-        writer.println("PLAYER-LIST:"+ String.join(";",playerData));
+    public void sendPlayerList(String typeOfList,ArrayList<String> playerData){
+        writer.println(typeOfList + String.join(";",playerData));
     }
     
     // this is for sorting the array in descending order

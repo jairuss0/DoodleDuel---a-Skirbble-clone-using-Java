@@ -58,9 +58,7 @@ public class WordDictionary {
         
     }
     
-    public ArrayList<String> getWords(){
-        return words;
-    }
+    
    
     public String serverGetRandomWord(){
         random = new Random();

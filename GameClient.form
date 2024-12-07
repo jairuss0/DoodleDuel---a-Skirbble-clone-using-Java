@@ -47,6 +47,9 @@
           <Dimension value="[1200, 700]"/>
         </Property>
       </Properties>
+      <AuxValues>
+        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new JPanel(){&#xa;    @Override&#xa;    protected void paintComponent(Graphics g) {&#xa;        super.paintComponent(g);&#xa;        // Draw the background image if it&apos;s set&#xa;        if (backgroundImage != null) {&#xa;            g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);&#xa;        }&#xa;    }&#xa;}"/>
+      </AuxValues>
 
       <Layout>
         <DimensionLayout dim="0">
@@ -78,14 +81,14 @@
                           </Group>
                       </Group>
                   </Group>
-                  <EmptySpace pref="37" max="32767" attributes="0"/>
+                  <EmptySpace pref="26" max="32767" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
         <DimensionLayout dim="1">
           <Group type="103" groupAlignment="0" attributes="0">
               <Group type="102" alignment="0" attributes="0">
-                  <EmptySpace min="-2" pref="56" max="-2" attributes="0"/>
+                  <EmptySpace min="-2" pref="47" max="-2" attributes="0"/>
                   <Component id="gameStatusPanel" min="-2" max="-2" attributes="0"/>
                   <EmptySpace type="unrelated" max="-2" attributes="0"/>
                   <Group type="103" groupAlignment="0" attributes="0">
@@ -110,7 +113,7 @@
                           <Component id="panelDialog" min="-2" max="-2" attributes="0"/>
                       </Group>
                   </Group>
-                  <EmptySpace pref="35" max="32767" attributes="0"/>
+                  <EmptySpace pref="44" max="32767" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
@@ -168,9 +171,11 @@
             <DimensionLayout dim="0">
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
-                      <EmptySpace min="-2" pref="63" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="17" max="-2" attributes="0"/>
+                      <Component id="clockImageHolder" min="-2" pref="75" max="-2" attributes="0"/>
+                      <EmptySpace type="separate" max="-2" attributes="0"/>
                       <Component id="timerLabel" min="-2" pref="62" max="-2" attributes="0"/>
-                      <EmptySpace pref="145" max="32767" attributes="0"/>
+                      <EmptySpace pref="109" max="32767" attributes="0"/>
                       <Component id="secretWordLabel" min="-2" pref="618" max="-2" attributes="0"/>
                       <EmptySpace min="-2" pref="101" max="-2" attributes="0"/>
                       <Component id="roundLabel" min="-2" pref="235" max="-2" attributes="0"/>
@@ -180,14 +185,18 @@
             </DimensionLayout>
             <DimensionLayout dim="1">
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Group type="102" alignment="0" attributes="0">
+                  <Group type="102" alignment="1" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="103" alignment="1" groupAlignment="3" attributes="0">
+                          <Group type="102" alignment="1" attributes="0">
+                              <Component id="clockImageHolder" max="32767" attributes="0"/>
+                              <EmptySpace min="-2" pref="10" max="-2" attributes="0"/>
+                          </Group>
+                          <Group type="103" groupAlignment="3" attributes="0">
                               <Component id="roundLabel" alignment="3" pref="63" max="32767" attributes="0"/>
                               <Component id="secretWordLabel" alignment="3" min="-2" pref="41" max="-2" attributes="0"/>
+                              <Component id="timerLabel" alignment="3" min="-2" pref="35" max="-2" attributes="0"/>
                           </Group>
-                          <Component id="timerLabel" alignment="1" max="32767" attributes="0"/>
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>
@@ -200,7 +209,7 @@
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Comic Sans MS" size="18" style="3"/>
                 </Property>
-                <Property name="horizontalAlignment" type="int" value="0"/>
+                <Property name="horizontalAlignment" type="int" value="2"/>
                 <Property name="text" type="java.lang.String" value="0"/>
                 <Property name="toolTipText" type="java.lang.String" value=""/>
               </Properties>
@@ -235,6 +244,11 @@
               <AccessibilityProperties>
                 <Property name="AccessibleContext.accessibleName" type="java.lang.String" value=""/>
               </AccessibilityProperties>
+            </Component>
+            <Component class="javax.swing.JLabel" name="clockImageHolder">
+              <AuxValues>
+                <AuxValue name="JavaCodeGenerator_InitCodePre" type="java.lang.String" value="// load the image&#xa;ImageIcon originalClockIcon = new ImageIcon(getClass().getResource(&quot;assets/alarmClock.png&quot;));&#xa;&#xa;int labelWidth = 70;&#xa;int labelHeight = 70;&#xa;Image scaledImage = originalClockIcon.getImage().getScaledInstance(labelWidth, labelHeight, Image.SCALE_SMOOTH);&#xa;ImageIcon scaledIcon = new ImageIcon(scaledImage);&#xa;clockImageHolder.setIcon(scaledIcon);"/>
+              </AuxValues>
             </Component>
           </SubComponents>
         </Container>

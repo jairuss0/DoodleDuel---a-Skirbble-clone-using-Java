@@ -1,12 +1,19 @@
 package skribbl_clone;
 
+import java.awt.Graphics;
+import java.awt.Image;
 import java.io.IOException;
 import java.net.Socket;
-import javax.swing.SwingUtilities;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
-public class GameMenu extends javax.swing.JFrame {
-
+public class GameMenu extends JFrame {
+    private Image backgroundImage;
+    
     public GameMenu() {
+        setBackgroundImage("assets/menuBg.png");
         initComponents();
     }
 
@@ -14,7 +21,17 @@ public class GameMenu extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel1 = new javax.swing.JPanel();
+        jPanel1 =  new JPanel(){
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                // Draw the background image if it's set
+                if (backgroundImage != null) {
+                    g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+                }
+            }
+
+        };
         jTextField2 = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
@@ -29,6 +46,7 @@ public class GameMenu extends javax.swing.JFrame {
         jPanel1.setBackground(new java.awt.Color(0, 65, 108));
 
         jTextField2.setToolTipText("Enter your name");
+        jTextField2.setRequestFocusEnabled(false);
         jTextField2.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 jTextField2KeyPressed(evt);
@@ -56,11 +74,14 @@ public class GameMenu extends javax.swing.JFrame {
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel1.setText("DoodleDuel");
 
+        ipInput.setRequestFocusEnabled(false);
         ipInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ipInputActionPerformed(evt);
             }
         });
+
+        portInput.setRequestFocusEnabled(false);
 
         jLabel2.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(255, 255, 255));
@@ -83,7 +104,6 @@ public class GameMenu extends javax.swing.JFrame {
                         .addGap(178, 178, 178)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addComponent(jTextField2)
-                            .addComponent(jButton1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 271, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                     .addComponent(ipInput, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -91,7 +111,8 @@ public class GameMenu extends javax.swing.JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(portInput, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                                    .addComponent(portInput, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addComponent(jButton1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap(115, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -114,6 +135,8 @@ public class GameMenu extends javax.swing.JFrame {
                 .addGap(41, 41, 41))
         );
 
+        jTextField2.getAccessibleContext().setAccessibleDescription("");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -130,18 +153,26 @@ public class GameMenu extends javax.swing.JFrame {
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
 
-        if (!jTextField2.getText().equals("Enter your name") || !jTextField2.getText().isEmpty()) {
+        if (!jTextField2.getText().isEmpty()) {
 
             String username = jTextField2.getText();
             String ip = ipInput.getText().trim();
-            int port = Integer.parseInt(portInput.getText().trim());
+            String port = portInput.getText().trim();
 
-            configSocket(username, username, ABORT);
-        } else {
+            configSocket(username, ip,port);
+        }  else if (jTextField2.getText().isEmpty()) {
             // add some jOption warning here
+            JOptionPane.showMessageDialog(this, "Enter a Username!.", "Alert", JOptionPane.WARNING_MESSAGE);
+
         }
     }//GEN-LAST:event_jButton1ActionPerformed
     
+    // Method to set the background image
+    public void setBackgroundImage(String imagePath) {
+        backgroundImage = new ImageIcon(getClass().getResource(imagePath)).getImage();
+        repaint(); // Repaint the panel to apply the new background image
+    }
+
     
     
     
@@ -149,7 +180,7 @@ public class GameMenu extends javax.swing.JFrame {
         
        
     }//GEN-LAST:event_jButton1KeyPressed
-    private void configSocket(String username,String ip, int port){
+    private void configSocket(String username,String ip, String port){
     
         try {
             // create socket object with the server ip and the server port that is listening to
@@ -167,15 +198,17 @@ public class GameMenu extends javax.swing.JFrame {
     
     private void jTextField2KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextField2KeyPressed
         if(evt.getKeyCode() == 10){
-            if (!jTextField2.getText().equals("Enter your name") || !jTextField2.getText().isEmpty()) {
+            if (!jTextField2.getText().isEmpty()) {
 
                 String username = jTextField2.getText();
                 String ip = ipInput.getText().trim();
-                int port =  Integer.parseInt(portInput.getText().trim());
+                String port =  portInput.getText().trim();
 
                 configSocket(username, ip, port);
-            } else {
+            } else if(jTextField2.getText().isEmpty()) {
                 // add some jOption warning here
+                JOptionPane.showMessageDialog(this,"Enter a Username!","Alert",JOptionPane.WARNING_MESSAGE);
+                
             }
         }
     }//GEN-LAST:event_jTextField2KeyPressed
