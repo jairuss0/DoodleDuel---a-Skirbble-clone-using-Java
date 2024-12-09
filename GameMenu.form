@@ -106,7 +106,6 @@
         <Component class="javax.swing.JTextField" name="jTextField2">
           <Properties>
             <Property name="toolTipText" type="java.lang.String" value="Enter your name"/>
-            <Property name="requestFocusEnabled" type="boolean" value="false"/>
           </Properties>
           <AccessibilityProperties>
             <Property name="AccessibleContext.accessibleDescription" type="java.lang.String" value=""/>
@@ -149,17 +148,11 @@
           </Properties>
         </Component>
         <Component class="javax.swing.JTextField" name="ipInput">
-          <Properties>
-            <Property name="requestFocusEnabled" type="boolean" value="false"/>
-          </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="ipInputActionPerformed"/>
           </Events>
         </Component>
         <Component class="javax.swing.JTextField" name="portInput">
-          <Properties>
-            <Property name="requestFocusEnabled" type="boolean" value="false"/>
-          </Properties>
         </Component>
         <Component class="javax.swing.JLabel" name="jLabel2">
           <Properties>

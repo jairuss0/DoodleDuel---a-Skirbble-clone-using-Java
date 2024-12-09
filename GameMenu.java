@@ -46,7 +46,6 @@ public class GameMenu extends JFrame {
         jPanel1.setBackground(new java.awt.Color(0, 65, 108));
 
         jTextField2.setToolTipText("Enter your name");
-        jTextField2.setRequestFocusEnabled(false);
         jTextField2.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 jTextField2KeyPressed(evt);
@@ -74,14 +73,11 @@ public class GameMenu extends JFrame {
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel1.setText("DoodleDuel");
 
-        ipInput.setRequestFocusEnabled(false);
         ipInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ipInputActionPerformed(evt);
             }
         });
-
-        portInput.setRequestFocusEnabled(false);
 
         jLabel2.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(255, 255, 255));
@@ -152,21 +148,47 @@ public class GameMenu extends JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-
-        if (!jTextField2.getText().isEmpty()) {
+        
+        if (!jTextField2.getText().isEmpty() && !ipInput.getText().isEmpty() && !portInput.getText().isEmpty() 
+                && !validatePort() /*&& isValidIPAddress() */ ) {
 
             String username = jTextField2.getText();
             String ip = ipInput.getText().trim();
             String port = portInput.getText().trim();
 
             configSocket(username, ip,port);
-        }  else if (jTextField2.getText().isEmpty()) {
+        }  else if (jTextField2.getText().isEmpty() && !ipInput.getText().isEmpty() && !portInput.getText().isEmpty()) {
             // add some jOption warning here
-            JOptionPane.showMessageDialog(this, "Enter a Username!.", "Alert", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Enter a Username!", "Alert", JOptionPane.WARNING_MESSAGE);
 
         }
+        else if(ipInput.getText().isEmpty() || portInput.getText().isEmpty()){
+             JOptionPane.showMessageDialog(this, "Enter Server IP Address and its Port!", "Alert", JOptionPane.WARNING_MESSAGE);
+        }
+        else if(jTextField2.getText().isEmpty() && ipInput.getText().isEmpty() && portInput.getText().isEmpty()){
+        
+            JOptionPane.showMessageDialog(this, "Inputs are required!", "Alert", JOptionPane.WARNING_MESSAGE);
+        }
+        else if(validatePort()){
+            JOptionPane.showMessageDialog(this, "Port must be numbers!", "Alert", JOptionPane.WARNING_MESSAGE);
+        }
+        else if(!isValidIPAddress()){
+            JOptionPane.showMessageDialog(this, "IP address is invalid!", "Alert", JOptionPane.WARNING_MESSAGE);
+        }
     }//GEN-LAST:event_jButton1ActionPerformed
-    
+    // method to validate port number
+    private boolean validatePort(){
+        String port = portInput.getText();
+        // Check if the input contains any characters (letters)
+        return port.matches(".*[a-zA-Z]+.*");
+         
+    }
+    // Method to validate IPv4 addresses using regex
+    private  boolean isValidIPAddress() {
+        String ip = ipInput.getText();
+        String ipPattern = "^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$";
+        return ip.matches(ipPattern);
+    }
     // Method to set the background image
     public void setBackgroundImage(String imagePath) {
         backgroundImage = new ImageIcon(getClass().getResource(imagePath)).getImage();
@@ -181,36 +203,23 @@ public class GameMenu extends JFrame {
        
     }//GEN-LAST:event_jButton1KeyPressed
     private void configSocket(String username,String ip, String port){
-    
+        int portNo = Integer.parseInt(port);
         try {
             // create socket object with the server ip and the server port that is listening to
-            Socket socket = new Socket("localhost", 1234);
+            Socket socket = new Socket(ip, portNo);
             GameClient gameClient = new GameClient(socket, username);
             gameClient.setVisible(true);
             gameClient.setLocationRelativeTo(null);
             // method to listen for the incoming messages
             gameClient.listenForMessage();
+            this.dispose();
         } catch (IOException e) {
-            System.err.print(e);
+            JOptionPane.showMessageDialog(this,"Connection failed: No server available, Check if IP Address and Port is correct!","Error",JOptionPane.ERROR_MESSAGE);
         }
-        this.dispose();
+        
     }
     
     private void jTextField2KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextField2KeyPressed
-        if(evt.getKeyCode() == 10){
-            if (!jTextField2.getText().isEmpty()) {
-
-                String username = jTextField2.getText();
-                String ip = ipInput.getText().trim();
-                String port =  portInput.getText().trim();
-
-                configSocket(username, ip, port);
-            } else if(jTextField2.getText().isEmpty()) {
-                // add some jOption warning here
-                JOptionPane.showMessageDialog(this,"Enter a Username!","Alert",JOptionPane.WARNING_MESSAGE);
-                
-            }
-        }
     }//GEN-LAST:event_jTextField2KeyPressed
 
     private void ipInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ipInputActionPerformed

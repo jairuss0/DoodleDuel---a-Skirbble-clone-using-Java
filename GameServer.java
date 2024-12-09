@@ -20,16 +20,16 @@ public class GameServer {
     private ArrayList<ClientHandlerGame> sortedPlayers;
     private int currentPlayerIndexTurn;
     private final int MAX_ROUND = 3;
-    private final int MAX_PLAYERS = 10;
+    private final int MAX_PLAYERS = 8;
     private int currentRound = 1;
     private String currentSecretWord = "";
     // to manage timer in each thread, server we use  the ScheduledExecutorService class 
     // to handle the synchronization of time update to all clients in a single thread so it will not blocks the server thread
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> timerTask; // reference to cancel the timer
-    private final int DRAWING_TIME = 10;
-    private final int CHOOSING_WORD_TIME = 5;
-    private final int REVEAL_WORD_TIME = 5;
+    private final int DRAWING_TIME = 20;
+    private final int CHOOSING_WORD_TIME = 3;
+    private final int REVEAL_WORD_TIME = 3;
     private final int ROUND_ANNOUNCING_TIME = 3;
     private final int RANK_ANNOUNCING_TIME = 15;
     private int correct_guesses = 0;
@@ -61,9 +61,12 @@ public class GameServer {
                 Thread thread = new Thread(player);
                 thread.start();
                 
+                
             }
         }catch(IOException e){
+            System.out.println("Server is down");
             System.err.println(e);
+            closeServer();
         }
 
     }
@@ -95,7 +98,7 @@ public class GameServer {
             return; // exit this method
         }
         int[] remainingTime = {ROUND_ANNOUNCING_TIME};
-        System.out.println("Round : " + currentRound + "Starting");
+        System.out.println("Round : " + currentRound + " Starting");
         // broadcast to all clients what round it is
         broadcastMessage("ROUND-STATE,ROUND "+currentRound+",Round "+currentRound+" out of 3");
         // announce it for three seconds
@@ -171,9 +174,9 @@ public class GameServer {
         
         int[] remainingTime = {CHOOSING_WORD_TIME};
         // broadcast to all cleints whose turn it is
-        broadcastMessage("ANNOUNCEMENT,TURN,Server is now choosing a word for "+ player.getUsername() + "!");
-        broadcastMessage("WORD-CHOOSING-STATE,Server is now choosing a word for '"+ player.getUsername()+"'",player);
-        player.notifyPlayer("SERVER-CHOOSING-WORD,Server is now choosing a word for YOU");
+        broadcastMessage("ANNOUNCEMENT,TURN,A word is being chosen for "+ player.getUsername() + "!");
+        broadcastMessage("WORD-CHOOSING-STATE,A word is being chosen for '"+ player.getUsername()+"'",player);
+        player.notifyPlayer("SERVER-CHOOSING-WORD,Game is picking a word for YOU");
         broadcastClientList("PLAYER-LIST:"); // update the player list to display who is turn to draw
         // schedule a task to broadcast the remaining time every second
         timerTask = timer.scheduleAtFixedRate(() -> {
@@ -247,6 +250,7 @@ public class GameServer {
 
             } else {
                 timerTask.cancel(false); // Stop this task to prevent task overlapping 
+                resetGuessCorrectlyStatus(); // reset the guess correctly status to remove green bg
                 broadcastMessage("CLEAR-DRAWING"); // clear panel after timer ended
                 player.setTurnStatus(false); // set the turn status to false;
                 broadcastClientList("PLAYER-LIST:"); // send the updated player list
@@ -313,7 +317,7 @@ public class GameServer {
             currentRound++;
             timerTask.cancel(false); // ensure to stop any timer task 
             // check if round hit the max round
-            if(currentRound > 3 ){
+            if(currentRound > MAX_ROUND){
                 System.out.println("Round maxed out!");
                 announceWinner();
             }
@@ -334,7 +338,7 @@ public class GameServer {
         broadcastMessage("TURN-DRAW," + 0); // hide the drawing tools to all players
         broadcastClientList("RANK-LIST:"); // broadcast players details
         System.out.println("WINNER,The Winner is "+ getWinnerUsername()+"!");
-        broadcastClientList("WINNER,The Winner is "+ getWinnerUsername()+"!");
+        broadcastClientList("WINNER,"+getWinnerUsername()+" is the Winner!");
         // schedule a task to broadcast the remaining time every second
         timerTask = timer.scheduleAtFixedRate(() -> {
             
@@ -348,6 +352,7 @@ public class GameServer {
                 timerTask.cancel(false); // Stop this task to prevent task overlapping 
                 broadcastMessage("REMOVE-RANK-ANNOUNCE-DIALOG");
                 broadcastMessage("GAME-STOPPED"); // reset the players game state
+                System.out.println("GAME ENDED");
                 resetGame(); // reset the server game state
             }
 
@@ -356,9 +361,7 @@ public class GameServer {
     
     // reveal clue letter to players depending on the seconds left
     private void revealClue(int seconds){
-        if(seconds < 10){
-            
-        }
+        
     }
     // mask the secret word
     private String maskSecretWord(String word){
@@ -378,14 +381,17 @@ public class GameServer {
             // increment the score of the player and the player who is drawing
             ClientHandlerGame drawer = returnPlayerDrawer();
             player.incrementScore(scoreWithinTimeFrame(message[3]));
-            drawer.incrementScore(50); // 55 for drawer for each player guessed correctly
+            drawer.incrementScore(40); // 40 for drawer for each player guessed correctly
+            player.setGuessedCorrectly(true); // set guess correctly to true to reflect green background in the client side
             // add a scoring based system after testing
             broadcastMessage("ANNOUNCEMENT,GUESS,"+player.getUsername()+" Guessed the Word!");
             player.notifyPlayer("GUESSED,"+currentSecretWord); // reveal the word to the player
             correct_guesses++;
             broadcastClientList("PLAYER-LIST:"); // broadcast updated player list
             // end the turn if all players guessed the secret word
+            // the player who is drawing not counted
             if(correct_guesses == (players.size() - 1)){
+                resetGuessCorrectlyStatus(); // reset the guess correctly status to remove green background
                 broadcastMessage("CLEAR-DRAWING"); // clear panel if all players were guessed correctly
                 System.out.println("all players guessed the word!");
                 timerTask.cancel(false);
@@ -448,7 +454,8 @@ public class GameServer {
     private String getWinnerUsername(){
         // return the player with the highest score
         // for each player in the list comparator call the getScore and compares it to each player
-        ClientHandlerGame playerWinner = Collections.max(players,Comparator.comparingInt(ClientHandlerGame::getScore)); 
+        ClientHandlerGame playerWinner = Collections.max(players,Comparator.comparingInt(ClientHandlerGame::getScore));
+        System.out.println("Player with the highest score: " + playerWinner.getUsername());
         return playerWinner.getUsername();
     }
     
@@ -490,6 +497,7 @@ public class GameServer {
         currentSecretWord = "";
         removeTurnStatus();
         broadcastClientList("PLAYER-LIST:");
+        System.out.println("Game-state restarted.");
     }
     
     // check if one player only
@@ -501,6 +509,13 @@ public class GameServer {
         for (ClientHandlerGame player : players) {
             player.setTurnStatus(false);
             player.setScore(0); // reset the score also
+        }
+    }
+    
+    private void resetGuessCorrectlyStatus(){
+        for (ClientHandlerGame player : players) {
+            player.setGuessedCorrectly(false);
+           
         }
     }
     
@@ -526,20 +541,28 @@ public class GameServer {
 
     // add player to the list
     public void addClientHandler(ClientHandlerGame player){
-        players.add(player);
-        broadcastMessage("ANNOUNCEMENT,JOIN,"+player.getUsername()+" joined the game!",player);
-        if(gameStarted){
-            System.out.println(player.getUsername() + " joined in the middle of the Game!");
-            // broadcast the round status and the current secret word
-            player.notifyPlayer("ON-GOING-JOINED,Round "+currentRound+" out of 3");
-            player.notifyPlayer("SECRET-WORD,"+maskSecretWord(currentSecretWord));
-            // send the drawing history to player
-            sendDrawingHistory(player);
+        // check if total players is less than to max players
+        if(players.size() < MAX_PLAYERS){
+            players.add(player);
+            broadcastMessage("ANNOUNCEMENT,JOIN," + player.getUsername() + " joined the game!", player);
+            if (gameStarted) {
+                System.out.println(player.getUsername() + " joined in the middle of the Game!");
+                // broadcast the round status and the current secret word
+                player.notifyPlayer("ON-GOING-JOINED,Round " + currentRound + " out of 3");
+                player.notifyPlayer("SECRET-WORD," + maskSecretWord(currentSecretWord));
+                // send the drawing history to player
+                sendDrawingHistory(player);
+            }
+            // assign player host
+            assignPlayerHost();
+            // update the scoreboard (player list)
+            broadcastClientList("PLAYER-LIST:");
         }
-        // assign player host
-        assignPlayerHost();
-        // update the scoreboard (player list)
-        broadcastClientList("PLAYER-LIST:");
+        else{
+            player.notifyPlayer("PLAYERS-MAXED");
+            System.out.println(player.getUsername() + " cannot join the game anymore");
+        }
+        
     
     }
     
@@ -554,8 +577,12 @@ public class GameServer {
     
     // remove player from the list
     public void removeClientHandler(ClientHandlerGame player){
-        broadcastMessage("ANNOUNCEMENT,LEFT,"+player.getUsername()+" left the game!");
+        // prevent from announcing players who can't join due to players were full
+        if(players.contains(player)){
+            broadcastMessage("ANNOUNCEMENT,LEFT,"+player.getUsername()+" left the game!");
+        }
         System.out.println(player.getUsername() + " left the game");
+        // check the player left were their turn
         if(player.getIsTurnStatus()){
             // disregard what happend to current round and next the turn
             timerTask.cancel(false);
@@ -580,7 +607,8 @@ public class GameServer {
             Collections.sort(sortedPlayers);
             int rank = 1;
             for(ClientHandlerGame player: sortedPlayers){
-                playerDetails.add("#"+rank+","+player.getUsername()+","+player.getScore()+","+player.getPlayerID()+","+player.getIsTurnStatus());
+                playerDetails.add("#"+rank+","+player.getUsername()+","+player.getScore()+","+player.getPlayerID()+","+player.getIsTurnStatus()+","+
+                        player.getGuessCorrectlyStatus());
                 rank++;
             }
             
@@ -600,12 +628,13 @@ public class GameServer {
     
     // close server socket
     public void closeServer(){
+        broadcastMessage("SERVER-DOWN");
         try{
             if(server != null){
                 server.close();
             }
         }catch(IOException e){
-            e.printStackTrace();
+            System.err.println(e);
         }
         
     }

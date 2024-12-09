@@ -20,6 +20,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     public BufferedReader reader;
     private GameServer gameServer;
     private boolean isTurn;
+    private boolean guessCorrectly;
     
 
     public ClientHandlerGame(Socket socket, GameServer gameServer) {
@@ -33,11 +34,13 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
             this.score = 0;
             this.isHost = false;
             this.isTurn = false;
+            this.guessCorrectly = false;
             this.playerID = createID();
             writer.println(this.playerID); // send the id to the corresponding client thread
             // add the client to the arraylist
             addClient();
         }catch(IOException e){
+            
             closeEverything(socket, reader, writer);
         }
     }
@@ -61,18 +64,26 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         
         switch(message[0]){
             // this is for drawing points coming from one of the clients
-            case "DRAWING" -> {
+            case "DRAWING": 
                 gameServer.broadcastMessage(messageFromClient, this);
                 gameServer.addDrawingPointHistory(messageFromClient.trim()); // add drawing history
-            }
+                break;
             // a guess or the messages coming from the chat
-            case "GUESS" -> gameServer.evaluateGuess(messageFromClient, this);
+            case "GUESS": 
+                gameServer.evaluateGuess(messageFromClient, this);
+                break;
             // a command to clear each clients drawing panel
-            case "CLEAR-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            case "CLEAR-DRAWING":
+                gameServer.broadcastMessage(messageFromClient, this);
+                break;
             // to undo certain drawing point to each clients
-            case "UNDO-DRAWING" -> gameServer.broadcastMessage(messageFromClient, this);
+            case "UNDO-DRAWING": 
+                gameServer.broadcastMessage(messageFromClient, this);
+                break;
             // a command sent by the client that is host
-            case "START-GAME" -> gameServer.startGame(messageFromClient, this);
+            case "START-GAME":
+                gameServer.startGame(messageFromClient, this);
+                break;
         }
         
     }
@@ -146,7 +157,9 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     public boolean getIsTurnStatus(){
         return isTurn;
     }
-    
+    public boolean getGuessCorrectlyStatus(){
+        return guessCorrectly;
+    }
     public void setUsername(String username){
         this.username = username;
     }
@@ -155,6 +168,10 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         this.score = score;
     }
     
+    public void setGuessedCorrectly(boolean status){
+        this.guessCorrectly = status;
+    
+    }
     public void setHostStatus(boolean status){
         this.isHost = status;
     }
@@ -162,6 +179,8 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
     public void setTurnStatus(boolean status){
         this.isTurn = status;
     }
+    
+
     
     
     

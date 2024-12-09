@@ -14,11 +14,17 @@ import java.awt.event.MouseMotionListener;
 import java.io.*;
 import java.net.*;
 import java.util.Stack;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextPane;
 import javax.swing.SwingConstants;
@@ -41,22 +47,21 @@ public class GameClient extends JFrame implements MouseMotionListener {
     // List to store drawPoint object 
     private Stack<DrawPoint> drawingPoint;
     private DrawPoint drawPoint;
-    
    
     // for styling the textPane
-    StyledDocument chatDoc;
+    StyledDocument chatDoc,scoreBoardDoc;
   
     SimpleAttributeSet attrBold = new SimpleAttributeSet();
     SimpleAttributeSet attrNormal = new SimpleAttributeSet();
     SimpleAttributeSet attrsAnnouncement = new SimpleAttributeSet();
-    SimpleAttributeSet centerAttr = new SimpleAttributeSet();
+    SimpleAttributeSet attrGreenBg = new SimpleAttributeSet();
     
     private int brushSize; // brush size
     private Color brushColor; // brush color
     private int pointsToRemove = 10;
     Point point; 
     Color color;
-    StringBuilder scoreboardStringBuilder, rankListStringBuilder;
+    StringBuilder rankBoardStringBuilder;
     JDialog roundDialog, serverChoosingWordDialog, revealWordDialog, declareFinalRanksDialog;
     JLabel serverLabelText, winnerLabelText;
     private Image backgroundImage;
@@ -76,8 +81,8 @@ public class GameClient extends JFrame implements MouseMotionListener {
         rankPane.setForeground(Color.white);
         rankPane.setBackground(new Color(59, 59, 59));
         rankPane.setFont(new java.awt.Font("Comic sans MS", 0, 18));
-        this.brushSize = 10; // initialize brush size to 10
-        this.brushColor = Color.black; // initialize color to 10
+        this.brushSize = 13; // initialize brush size to 13
+        this.brushColor = Color.black; // initialize color to black
         this.drawingPoint = new Stack<>();
         this.socket = socket;
         this.username = username;
@@ -161,6 +166,17 @@ public class GameClient extends JFrame implements MouseMotionListener {
         writer.println("DRAWING,"+ point.x+","+point.y+","+red+","+green+","+blue+","+brushSize);
         
     }
+    // determine to hide or unhide the start button
+    private void hideHostBtn(){
+        startGameBtn.setVisible(false);
+        
+    }
+    private void showHostBtn(){
+        if(hostStatus){
+            startGameBtn.setVisible(true);
+        }
+        
+    }
     
     // send client's message to server
     public void sendMessage(){
@@ -184,7 +200,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
                    while(socket.isConnected() && (messageFromServer = reader.readLine()) != null){
                        messageFromServer.trim();
                        processMessage(messageFromServer);
-                       checkIfPlayerListMessage(messageFromServer);
+                       checkClientListMessage(messageFromServer);
                    }
                 }catch(IOException e){
                     closeEverything(socket, reader, writer);
@@ -197,67 +213,91 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private void processMessage(String receivedMessage){
         // initialize the document style for the chat and scoreboard text pane
         chatDoc = chatPane.getStyledDocument();
-       
+        scoreBoardDoc = scoreBoardPane.getStyledDocument();
+        
         String[] message = receivedMessage.split(",");
        
         switch(message[0]){
-            case "ANNOUNCEMENT" -> // listens to game state
+            case "ANNOUNCEMENT": // listens to game state
                 evaluateAnnouncementMessage(message);
-            case "GUESS" -> // listens to other players chats (their guesses)
+                break;
+            case "GUESS": // listens to other players chats (their guesses)
                 evaluateClientMessage(message);
-            case "DRAWING" -> // listens to the player who is drawing
+                break;
+            case "DRAWING": // listens to the player who is drawing
                 evaluateClientDrawingPoints(message);
-            case "CLEAR-DRAWING" -> // clear client-side drawing panel
+                break;
+            case "CLEAR-DRAWING": // clear client-side drawing panel
                 clearDrawingPanel();
-            case "UNDO-DRAWING" -> // undo drawing
+                break;
+            case "UNDO-DRAWING": // undo drawing
                 undoDrawingPanel();
-            case "TURN-DRAW" -> // check if the player's turn to draw to enable the draw tools otherwise disable it
+                break;
+            case "TURN-DRAW" : // check if the player's turn to draw to enable the draw tools otherwise disable it
                 turnToDraw(Integer.parseInt(message[1]));
-            case "TIMER-DRAW" -> // update timer coming from the server
-                updateTimer(message[1]);
-            case "HOST-STATUS" -> { // make the player host and able the host start button
+                break;
+            case "TIMER-DRAW" : // update timer coming from the server
+                updateDrawingTimer(message[1]);
+                break;
+            case "HOST-STATUS" :// make the player host and able the host start button
                 hostStatus = true;
-                if(message[1].equals("OUT-GAME")){
+                if (message[1].equals("OUT-GAME")) {
                     showHostBtn();
-                }
-                else if(message[1].equals("IN-GAME")){
+                } else if (message[1].equals("IN-GAME")) {
                     hideHostBtn();
                 }
-            }
-            case "HOST-COMMAND" -> { // a command coming from the server triggered if the host started the game
+                break;
+            
+            case "HOST-COMMAND": // a command coming from the server triggered if the host started the game
                 System.out.println(message[1]);
                 if(message[1].equals("GAME-STARTED")){
                     hideHostBtn(); // hide the start button to not disrupt the game state
                 }
-            }
-            case "ROUND-STATE" -> {
+                break;
+            case "ROUND-STATE":
                 secretWordLabel.setText("WORD");
                 showRoundDialog(message); // display the details about what round it is
-            }
-            case "TIMER-ROUND-STATE" -> updateTimer(message[1]); // to update the timer
-            case "TIMER-WORD-CHOOSING" -> updateTimer(message[1]); // to update the timer
-            case "WORD-CHOOSING-STATE" -> { // display the dialog where it informs players that the server were choosing a word
-                 //clearDrawingPanel();
+                break;
+            case "TIMER-ROUND-STATE":
+                updateTimer(message[1]);
+                break;// to update the timer
+            case "TIMER-WORD-CHOOSING":
+                updateTimer(message[1]); // to update the timer
+                break;
+            case "WORD-CHOOSING-STATE": // display the dialog where it informs players that the server were choosing a word
+                
                  secretWordLabel.setText("WORD");
                  showGameStateDialog(message);
-            }
-            case "SERVER-CHOOSING-WORD" -> { // same as word-choosing-state but this is for the one that is going to draw
+                 break;
+            case "SERVER-CHOOSING-WORD": // same as word-choosing-state but this is for the one that is going to draw
                 secretWordLabel.setText("WORD");
                 showGameStateDialog(message);
-            }
-            case "TIMER-REVEAL-WORD" -> updateTimer(message[1]); // update timer
-            
-            case "REVEAL-WORD-STATE" -> { // reveal word dialog
-                 //clearDrawingPanel();
+                break;
+            case "TIMER-REVEAL-WORD":
+                updateTimer(message[1]); // update timer
+                break;
+            case "REVEAL-WORD-STATE": // reveal word dialog
+                
                 secretWordLabel.setText(message[2]);
                 showTheSecretWordDialog(message);
-            }
-            case "REMOVE-REVEAL-DIALOG" -> revealWordDialog.dispose(); // remove dialog
-            case "SECRET-WORD" -> secretWordLabel.setText(message[1]); // set the label as the secret word
-            case "CHOSEN-WORD" -> secretWordLabel.setText(message[1]); // set the label as the word to guess
-            case "REMOVE-DIALOG-ROUND" -> roundDialog.dispose(); // remove dialog
-            case "REMOVE-DIALOG-WORD" -> serverChoosingWordDialog.dispose(); // remove dialog
-            case "GAME-STOPPED" -> { // reset the game state
+                playAudio("assets/reveal.wav");
+                break;
+            case "REMOVE-REVEAL-DIALOG":
+                revealWordDialog.dispose();
+                break; // remove dialog
+            case "SECRET-WORD":
+                secretWordLabel.setText(message[1]); // set the label as the secret word
+                break;
+            case "CHOSEN-WORD": 
+                secretWordLabel.setText(message[1]); // set the label as the word to guess
+                break;
+            case "REMOVE-DIALOG-ROUND":
+                roundDialog.dispose(); // remove dialog
+                break;
+            case "REMOVE-DIALOG-WORD":
+                serverChoosingWordDialog.dispose(); // remove dialog
+                break;
+            case "GAME-STOPPED": // reset the game state
                 updateTimer("0");
                 showHostBtn();
                 secretWordLabel.setText("WORD");
@@ -266,42 +306,44 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 serverChoosingWordDialog.dispose();
                 roundDialog.dispose();
                 revealWordDialog.dispose();
-                
-            }
-            case "GUESSED" ->{ // if the player got the right guess
+                break;
+            case "GUESSED": // if the player got the right guess
                 secretWordLabel.setText(message[1]);
                 chatInpuTextField.setEditable(false); // disable the input to prevent cheating
-            }
-            case "ON-GOING-JOINED" ->{ // if the player joined in on-going game
+                playAudio("assets/guess.wav");
+                break;
+            case "ON-GOING-JOINED":  // if the player joined in on-going game
                 roundLabel.setText(message[1]);
-            }
-            case "TIMER-RANK-ANNOUNCE" -> updateTimer(message[1]); // update timer
-            case "WINNER" ->{ // display the rank and the winner
+                break;
+            case "TIMER-RANK-ANNOUNCE":
+                updateTimer(message[1]); // update timer
+                break;
+            case "WINNER": // display the rank and the winner
                 secretWordLabel.setText("WORD");
                 showRankListDialog(message);
-            }
-            case "REMOVE-RANK-ANNOUNCE-DIALOG" ->{
+                break;
+            case "REMOVE-RANK-ANNOUNCE-DIALOG":
                 declareFinalRanksDialog.dispose();
-            }
+                break;
+            case "PLAYERS-MAXED":
+                JOptionPane.showMessageDialog(this, "Cannot join: The game is full!", "Error", JOptionPane.ERROR_MESSAGE);
+                GameMenu menu = new GameMenu();
+                menu.setTitle("DoodleDuel - Menu");
+                menu.setResizable(false);
+                menu.setVisible(true);
+                menu.setLocationRelativeTo(null);
+                this.dispose();
+                break;
+            case "SERVER-DOWN":
+                JOptionPane.showMessageDialog(this, "Disconnected: Server has shut down!", "Error", JOptionPane.ERROR_MESSAGE);
+                break;
                 
         }
         
     }
     
-   
-    // determine to hide or unhide the start button
-    private void hideHostBtn(){
-        startGameBtn.setVisible(false);
-        
-    }
-    private void showHostBtn(){
-        if(hostStatus){
-            startGameBtn.setVisible(true);
-        }
-        
-    }
     // check if messages received is player list (this is for scoreboard)
-    private void checkIfPlayerListMessage(String message){
+    private void checkClientListMessage(String message){
         if(message.startsWith("PLAYER-LIST:")){
             // extract the message that contains the player lists
             // using the substring as the begin index of the last index of the prefix message
@@ -353,12 +395,27 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private void evaluateAnnouncementMessage(String[] message){
         
         switch (message[1]) {
-            case "LEFT" -> StyleConstants.setForeground(attrsAnnouncement, Color.RED);
-            case "JOIN" -> StyleConstants.setForeground(attrsAnnouncement, Color.GREEN);
-            case "TURN" -> StyleConstants.setForeground(attrsAnnouncement, Color.BLUE);
-            case "SERVER" -> StyleConstants.setForeground(attrsAnnouncement, Color.orange);
-            case "GUESS" -> StyleConstants.setForeground(attrsAnnouncement, Color.green);
-            default -> StyleConstants.setForeground(attrsAnnouncement, Color.black);
+            case "LEFT":
+                StyleConstants.setForeground(attrsAnnouncement, Color.RED);
+                playAudio("assets/left.wav");
+                break;
+            case "JOIN":
+                StyleConstants.setForeground(attrsAnnouncement, Color.GREEN);
+                playAudio("assets/joined.wav");
+                break;
+            case "TURN":
+                StyleConstants.setForeground(attrsAnnouncement, Color.BLUE);
+                playAudio("assets/start.wav");
+                break;
+            case "SERVER":
+                StyleConstants.setForeground(attrsAnnouncement, Color.orange);
+                break;
+            case "GUESS":
+                StyleConstants.setForeground(attrsAnnouncement, Color.green);
+                break;
+            default:
+                StyleConstants.setForeground(attrsAnnouncement, Color.black);
+                break;
         }
         StyleConstants.setBold(attrsAnnouncement, true);
         
@@ -368,30 +425,41 @@ public class GameClient extends JFrame implements MouseMotionListener {
         } catch (BadLocationException e) {
             System.err.println(e);
         }
+        scrollToBottom(); // scroll to bottom every message received
     }
     
     // this one will process any updates within the players list and their details
     private void evaluateScoreboardMessage(String message){
-        scoreboardStringBuilder = new StringBuilder(); // initialize new StringBuilder
+        scoreBoardPane.setText(""); // clear any existing text
+        StyleConstants.setBackground(attrGreenBg, Color.green);
         // split the message using ; as delimiter to split each players details
         String[] players = message.split(";");
         // loop thru the splitted players string
         for(String player : players){
             // split each player using , as delimiter 
-            // append each player details to one string using string builder 
             String[] playerInfo = player.split(",");
-            String drawerEmoji = playerInfo[4].equals("true") ? "🖍️" : "";
-            scoreboardStringBuilder.append(playerInfo[0]).append("  ").append(playerInfo[1])
-                    .append(": ")
-                    .append(playerInfo[2])
-                    .append(" points").append(" ").append(drawerEmoji).append("\n");
+            String drawerEmoji = Boolean.parseBoolean(playerInfo[4]) == true ? "🖍️" : "";
+            String playerDetails = playerInfo[0] + " " + playerInfo[1] + ": "
+                    + playerInfo[2] + " points" +  " " + drawerEmoji + "\n";
+            
+            try{
+                // apply green background if the player guessed correctly
+                if(Boolean.parseBoolean(playerInfo[5])){
+                    scoreBoardDoc.insertString(scoreBoardDoc.getLength(), playerDetails, attrGreenBg);
+                }
+                else{
+                    scoreBoardDoc.insertString(scoreBoardDoc.getLength(), playerDetails, null);
+                }
+            }catch (BadLocationException e) {
+                
+                System.err.println(e);
+            }
         }
-        // set the stringbuilder text to the textPane
-        scoreBoardPane.setText(scoreboardStringBuilder.toString());
+       
     }
     
     private void evaluateRankMessage(String message){
-        scoreboardStringBuilder = new StringBuilder();
+        rankBoardStringBuilder = new StringBuilder(); // initialize new StringBuilder
         // split the message using ; as delimiter to split each players details
         String[] players = message.split(";");
         // loop thru the splitted players string
@@ -399,14 +467,14 @@ public class GameClient extends JFrame implements MouseMotionListener {
             // split each player using , as delimiter 
             // append each player details to one string using string builder 
             String[] playerInfo = player.split(",");
-            String winnerEmoji = playerInfo[0].equals("#1") ? "🎖️️" : "";
-            scoreboardStringBuilder.append(playerInfo[0]).append("  ").append(playerInfo[1])
+            String winnerEmoji = playerInfo[0].equalsIgnoreCase("#1") ? "🎖️️" : "";
+            rankBoardStringBuilder.append(playerInfo[0]).append("  ").append(playerInfo[1])
                     .append(": ")
                     .append(playerInfo[2])
                     .append(" points").append(" ").append(winnerEmoji).append("\n");
         }
         // set the stringbuilder text to the textPane
-        rankPane.setText(scoreboardStringBuilder.toString());
+        rankPane.setText(rankBoardStringBuilder.toString());
     
     }
     
@@ -414,6 +482,22 @@ public class GameClient extends JFrame implements MouseMotionListener {
         // update the timer label
         SwingUtilities.invokeLater(() -> 
                 timerLabel.setText(seconds));
+    }
+    // separate timer for the drawing time to only play audio of the countdown without playing it on other timers
+    
+    private void updateDrawingTimer(String time){
+        int seconds = Integer.parseInt(time);
+        SwingUtilities.invokeLater(() -> {
+             if(seconds < 10){
+                 playAudio("assets/timer.wav");
+             }
+             timerLabel.setText(time);
+        });
+    }
+    private void scrollToBottom() {
+        SwingUtilities.invokeLater(() -> {
+            chatPane.setCaretPosition(chatPane.getDocument().getLength());
+        });
     }
     
     // undo drawing
@@ -435,6 +519,108 @@ public class GameClient extends JFrame implements MouseMotionListener {
         
         // refresh the panel to see the update
         drawingPanel.repaint();
+    }
+     private void showRoundDialog(String[] message){
+        // use the swingUtilities.invokeLater to prevent the GUI freeze and
+        // update the gui on separate thread 
+        SwingUtilities.invokeLater(() -> {
+           
+            serverLabelText.setForeground(Color.white);
+            serverLabelText.setText(message[1].toUpperCase());
+            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 20));
+            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
+            roundDialog.add(serverLabelText);
+            // remove the window buttons and bars
+            roundDialog.setUndecorated(true);
+            roundDialog.getContentPane().setBackground(new Color(59,59,59));
+            roundDialog.setModal(true);
+            roundDialog.setSize(500, 250);
+            
+            roundDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
+            roundDialog.setVisible(true);
+            roundLabel.setText(message[2]);
+        });
+        
+    }
+    
+    private void showGameStateDialog(String[] message){
+        // use the swingUtilities.invokeLater to prevent the GUI freeze and
+        // update the gui on separate thread 
+        SwingUtilities.invokeLater(() -> {
+           
+            serverLabelText.setForeground(Color.white);
+            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 18));
+            serverLabelText.setText(message[1]);
+            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
+            serverChoosingWordDialog.add(serverLabelText);
+            serverChoosingWordDialog.setUndecorated(true);
+            serverChoosingWordDialog.getContentPane().setBackground(new Color(59,59,59));
+            serverChoosingWordDialog.setModal(true);
+            serverChoosingWordDialog.setSize(600, 300);
+            serverChoosingWordDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
+            serverChoosingWordDialog.setVisible(true);
+        });
+    
+    }
+    
+    private void showTheSecretWordDialog(String[] message){
+        // use the swingUtilities.invokeLater to prevent the GUI freeze and
+        // update the gui on separate thread 
+        SwingUtilities.invokeLater(() -> {
+            
+            serverLabelText.setForeground(Color.white);
+            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 18));
+            serverLabelText.setText(message[1]);
+            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
+            revealWordDialog.add(serverLabelText);
+            revealWordDialog.setUndecorated(true);
+            revealWordDialog.getContentPane().setBackground(new Color(59,59,59));
+            revealWordDialog.setModal(true);
+            revealWordDialog.setSize(600, 300);
+            revealWordDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
+            revealWordDialog.setVisible(true);
+        });
+    
+    }
+    
+    private void showRankListDialog(String[] message){
+        SwingUtilities.invokeLater(() -> {
+            winnerLabelText.setForeground(Color.white);
+            winnerLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 22));
+            winnerLabelText.setText(message[1].replace("#1", ""));
+            winnerLabelText.setHorizontalAlignment(SwingConstants.CENTER);
+            declareFinalRanksDialog.setLayout(new BorderLayout());
+            declareFinalRanksDialog.add(winnerLabelText,BorderLayout.NORTH);
+            declareFinalRanksDialog.add(rankPane,BorderLayout.CENTER);
+            declareFinalRanksDialog.setUndecorated(true);
+            declareFinalRanksDialog.getContentPane().setBackground(new Color(59, 59, 59));
+            declareFinalRanksDialog.setModal(true);
+            declareFinalRanksDialog.setSize(650, 350);
+            declareFinalRanksDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
+            declareFinalRanksDialog.setVisible(true);
+        });
+        
+    }
+    
+    // audio for client
+    private void playAudio(String audioName) {
+        URL resourceUrl = getClass().getResource(audioName);
+        if (resourceUrl == null) {
+            System.err.println("Audio resource not found: " + audioName);
+            return;
+        }
+        try{
+            File file = new File(resourceUrl.getFile());
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(file);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioStream);
+            
+            clip.start();
+            
+        }catch(UnsupportedAudioFileException | IOException | LineUnavailableException e){
+            System.err.println(e);
+        }
+      
     }
     // INIT COMPONENTS CODE HERE ->
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -493,6 +679,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     magentaBtn = new javax.swing.JButton();
     cyanBtn = new javax.swing.JButton();
     brownBtn = new javax.swing.JButton();
+    skinColorbtn = new javax.swing.JButton();
     brushSizeSlider = new javax.swing.JSlider();
     brushSizeLabel = new javax.swing.JLabel();
     clearBtn = new javax.swing.JButton();
@@ -616,6 +803,11 @@ public class GameClient extends JFrame implements MouseMotionListener {
     });
 
     blackBtn.setBackground(new java.awt.Color(0, 0, 0));
+    blackBtn.addActionListener(new java.awt.event.ActionListener() {
+        public void actionPerformed(java.awt.event.ActionEvent evt) {
+            blackBtnActionPerformed(evt);
+        }
+    });
 
     redBtn.setBackground(java.awt.Color.red);
     redBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -687,6 +879,14 @@ public class GameClient extends JFrame implements MouseMotionListener {
         }
     });
 
+    skinColorbtn.setBackground(new java.awt.Color(241, 194, 125));
+    skinColorbtn.setActionCommand("");
+    skinColorbtn.addActionListener(new java.awt.event.ActionListener() {
+        public void actionPerformed(java.awt.event.ActionEvent evt) {
+            skinColorbtnActionPerformed(evt);
+        }
+    });
+
     javax.swing.GroupLayout colorsBtnPanelLayout = new javax.swing.GroupLayout(colorsBtnPanel);
     colorsBtnPanel.setLayout(colorsBtnPanelLayout);
     colorsBtnPanelLayout.setHorizontalGroup(
@@ -716,11 +916,13 @@ public class GameClient extends JFrame implements MouseMotionListener {
             .addComponent(cyanBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
             .addComponent(brownBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addGap(0, 12, Short.MAX_VALUE))
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+            .addComponent(skinColorbtn, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGap(0, 71, Short.MAX_VALUE))
     );
     colorsBtnPanelLayout.setVerticalGroup(
         colorsBtnPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGroup(colorsBtnPanelLayout.createSequentialGroup()
+        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, colorsBtnPanelLayout.createSequentialGroup()
             .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(colorsBtnPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                 .addComponent(brownBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 23, Short.MAX_VALUE)
@@ -734,7 +936,8 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 .addComponent(redBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(blackBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(whiteBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(orangeBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addComponent(orangeBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(skinColorbtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
     );
 
     brushSizeSlider.setForeground(new java.awt.Color(255, 255, 255));
@@ -780,17 +983,17 @@ public class GameClient extends JFrame implements MouseMotionListener {
             .addContainerGap()
             .addGroup(DrawingPanelToolsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
-                    .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE))
-                .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
                     .addComponent(brushSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(colorsBtnPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 42, Short.MAX_VALUE)
+                    .addComponent(colorsBtnPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(UndoBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)))
-            .addContainerGap())
+                    .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addContainerGap())
+                .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
+                    .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
     );
     DrawingPanelToolsLayout.setVerticalGroup(
         DrawingPanelToolsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -801,11 +1004,10 @@ public class GameClient extends JFrame implements MouseMotionListener {
                     .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(UndoBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
-                    .addGroup(DrawingPanelToolsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(brushSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(colorsBtnPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(brushSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(colorsBtnPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
             .addContainerGap(12, Short.MAX_VALUE))
     );
 
@@ -836,14 +1038,16 @@ public class GameClient extends JFrame implements MouseMotionListener {
                             .addGap(6, 6, 6)
                             .addComponent(panelDialog, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGap(18, 18, 18)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(DrawingPanelTools, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(drawingPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(chatInpuTextField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE))))
             .addContainerGap(26, Short.MAX_VALUE))
+        .addGroup(jPanel1Layout.createSequentialGroup()
+            .addGap(183, 183, 183)
+            .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
     jPanel1Layout.setVerticalGroup(
         jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -853,22 +1057,20 @@ public class GameClient extends JFrame implements MouseMotionListener {
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
             .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(jPanel1Layout.createSequentialGroup()
-                            .addGap(55, 55, 55)
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 321, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(chatInpuTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGap(18, 18, 18)
-                    .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGap(55, 55, 55)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 321, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addComponent(chatInpuTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGroup(jPanel1Layout.createSequentialGroup()
                     .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 450, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(startGameBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                     .addComponent(panelDialog, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-            .addContainerGap(44, Short.MAX_VALUE))
+            .addGap(18, 18, 18)
+            .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addContainerGap(42, Short.MAX_VALUE))
     );
 
     drawingPanel.getAccessibleContext().setAccessibleName("");
@@ -888,87 +1090,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
 
     pack();
     }// </editor-fold>//GEN-END:initComponents
-    private void showRoundDialog(String[] message){
-        // use the swingUtilities.invokeLater to prevent the GUI freeze and
-        // update the gui on separate thread 
-        SwingUtilities.invokeLater(() -> {
-           
-            serverLabelText.setForeground(Color.white);
-            serverLabelText.setText(message[1].toUpperCase());
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 20));
-            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
-            roundDialog.add(serverLabelText);
-            // remove the window buttons and bars
-            roundDialog.setUndecorated(true);
-            roundDialog.getContentPane().setBackground(new Color(59,59,59));
-            roundDialog.setModal(true);
-            roundDialog.setSize(500, 250);
-            
-            roundDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
-            roundDialog.setVisible(true);
-            roundLabel.setText(message[2]);
-        });
-        
-    }
-    
-    private void showGameStateDialog(String[] message){
-        // use the swingUtilities.invokeLater to prevent the GUI freeze and
-        // update the gui on separate thread 
-        SwingUtilities.invokeLater(() -> {
-           
-            serverLabelText.setForeground(Color.white);
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 18));
-            serverLabelText.setText(message[1]);
-            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
-            serverChoosingWordDialog.add(serverLabelText);
-            serverChoosingWordDialog.setUndecorated(true);
-            serverChoosingWordDialog.getContentPane().setBackground(new Color(59,59,59));
-            serverChoosingWordDialog.setModal(true);
-            serverChoosingWordDialog.setSize(600, 300);
-            serverChoosingWordDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
-            serverChoosingWordDialog.setVisible(true);
-        });
-    
-    }
-    
-    private void showTheSecretWordDialog(String[] message){
-        // use the swingUtilities.invokeLater to prevent the GUI freeze and
-        // update the gui on separate thread 
-        SwingUtilities.invokeLater(() -> {
-            
-            serverLabelText.setForeground(Color.white);
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 18));
-            serverLabelText.setText(message[1]);
-            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
-            revealWordDialog.add(serverLabelText);
-            revealWordDialog.setUndecorated(true);
-            revealWordDialog.getContentPane().setBackground(new Color(59,59,59));
-            revealWordDialog.setModal(true);
-            revealWordDialog.setSize(600, 300);
-            revealWordDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
-            revealWordDialog.setVisible(true);
-        });
-    
-    }
-    
-    private void showRankListDialog(String[] message){
-        SwingUtilities.invokeLater(() -> {
-            winnerLabelText.setForeground(Color.white);
-            winnerLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 22));
-            winnerLabelText.setText(message[1]);
-            winnerLabelText.setHorizontalAlignment(SwingConstants.CENTER);
-            declareFinalRanksDialog.setLayout(new BorderLayout());
-            declareFinalRanksDialog.add(winnerLabelText,BorderLayout.NORTH);
-            declareFinalRanksDialog.add(rankPane,BorderLayout.CENTER);
-            declareFinalRanksDialog.setUndecorated(true);
-            declareFinalRanksDialog.getContentPane().setBackground(new Color(59, 59, 59));
-            declareFinalRanksDialog.setModal(true);
-            declareFinalRanksDialog.setSize(650, 350);
-            declareFinalRanksDialog.setLocationRelativeTo(drawingPanel); // Centers it on drawing panel
-            declareFinalRanksDialog.setVisible(true);
-        });
-        
-    }
+   
     
     private void chatInpuTextFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chatInpuTextFieldActionPerformed
         // TODO add your handling code here:
@@ -979,6 +1101,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         // invoke the send message function if user press enter key
         if(evt.getKeyCode() == 10){
             sendMessage();
+            
         }
     }//GEN-LAST:event_chatInpuTextFieldKeyPressed
 
@@ -1063,6 +1186,16 @@ public class GameClient extends JFrame implements MouseMotionListener {
         }
        
     }//GEN-LAST:event_startGameBtnActionPerformed
+
+    private void blackBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_blackBtnActionPerformed
+        // TODO add your handling code here:
+        brushColor = Color.black;
+    }//GEN-LAST:event_blackBtnActionPerformed
+
+    private void skinColorbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_skinColorbtnActionPerformed
+        // TODO add your handling code here:
+        brushColor = new Color(241,194,125);
+    }//GEN-LAST:event_skinColorbtnActionPerformed
     
     
     
@@ -1114,6 +1247,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private javax.swing.JLabel roundLabel;
     private javax.swing.JTextPane scoreBoardPane;
     private javax.swing.JLabel secretWordLabel;
+    private javax.swing.JButton skinColorbtn;
     private javax.swing.JButton startGameBtn;
     private javax.swing.JLabel timerLabel;
     private javax.swing.JButton whiteBtn;
