@@ -7,8 +7,10 @@ package skribbl_clone;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.Set;
 
 /**
  *
@@ -17,9 +19,12 @@ import java.util.Scanner;
 public class WordDictionary {
     
     private ArrayList<String> words = new ArrayList();
+    private Set<String> usedWords = new HashSet(); // we will use sets for the duplicated words that is already return to server
     Scanner scan;
     private String WORD_DICTIONARY_PATH = null;
     Random random;
+    int size;
+    String randomWord;
     
     
     public WordDictionary() {
@@ -62,9 +67,15 @@ public class WordDictionary {
    
     public String serverGetRandomWord(){
         random = new Random();
-        int index = random.nextInt(words.size());
-        return words.get(index);
-   
+        size = words.size();
+        // continue to loop if the randomWord is in the sets
+        do{
+            int index = random.nextInt(size);
+            randomWord = words.get(index);
+        }while(usedWords.contains(randomWord));
+        
+        usedWords.add(randomWord); 
+        return randomWord;
     }
     
     

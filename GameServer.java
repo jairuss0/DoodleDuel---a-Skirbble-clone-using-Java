@@ -27,17 +27,14 @@ public class GameServer {
     // to handle the synchronization of time update to all clients in a single thread so it will not blocks the server thread
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> timerTask; // reference to cancel the timer
-    private final int DRAWING_TIME = 20;
+    private final int DRAWING_TIME = 80;
     private final int CHOOSING_WORD_TIME = 3;
     private final int REVEAL_WORD_TIME = 3;
     private final int ROUND_ANNOUNCING_TIME = 3;
     private final int RANK_ANNOUNCING_TIME = 15;
     private int correct_guesses = 0;
     private boolean gameStarted = false;
- 
     
-    
-
     public GameServer() {
         players = new ArrayList<>();
         wordDictionary = new WordDictionary();
@@ -242,7 +239,7 @@ public class GameServer {
             }
             
             if (remainingTime[0] > 0) {
-                revealClue(remainingTime[0]); // reveal clue if under 45 seconds
+                
                 // broadcast the timer updates
                 broadcastMessage("TIMER-DRAW," + remainingTime[0]);
                 System.out.println("Timer drawing state: " + remainingTime[0]);
@@ -359,10 +356,7 @@ public class GameServer {
         }, 0, 1, TimeUnit.SECONDS); // Initial delay 0, repeat every 1 second
     }
     
-    // reveal clue letter to players depending on the seconds left
-    private void revealClue(int seconds){
-        
-    }
+   
     // mask the secret word
     private String maskSecretWord(String word){
         String mask = "";
@@ -373,6 +367,7 @@ public class GameServer {
         return mask;
         
     }
+    
     // evaluate guess from players
     public void evaluateGuess(String guessFromClient, ClientHandlerGame player){
         String[] message = guessFromClient.split(",");
@@ -386,6 +381,7 @@ public class GameServer {
             // add a scoring based system after testing
             broadcastMessage("ANNOUNCEMENT,GUESS,"+player.getUsername()+" Guessed the Word!");
             player.notifyPlayer("GUESSED,"+currentSecretWord); // reveal the word to the player
+            broadcastMessage("PLAYER-GUESSED-CORRECTLY");
             correct_guesses++;
             broadcastClientList("PLAYER-LIST:"); // broadcast updated player list
             // end the turn if all players guessed the secret word

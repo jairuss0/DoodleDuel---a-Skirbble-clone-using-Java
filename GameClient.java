@@ -6,7 +6,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -17,10 +16,10 @@ import java.util.Stack;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineEvent;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -49,12 +48,13 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private DrawPoint drawPoint;
    
     // for styling the textPane
-    StyledDocument chatDoc,scoreBoardDoc;
+    StyledDocument chatDoc,scoreBoardDoc,rankPaneDoc;
   
     SimpleAttributeSet attrBold = new SimpleAttributeSet();
     SimpleAttributeSet attrNormal = new SimpleAttributeSet();
     SimpleAttributeSet attrsAnnouncement = new SimpleAttributeSet();
     SimpleAttributeSet attrGreenBg = new SimpleAttributeSet();
+    SimpleAttributeSet attrCenter = new SimpleAttributeSet();
     
     private int brushSize; // brush size
     private Color brushColor; // brush color
@@ -80,7 +80,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         rankPane.setEditable(false);
         rankPane.setForeground(Color.white);
         rankPane.setBackground(new Color(59, 59, 59));
-        rankPane.setFont(new java.awt.Font("Comic sans MS", 0, 18));
+        rankPane.setFont(new java.awt.Font("Comic sans MS", 0, 23));
         this.brushSize = 13; // initialize brush size to 13
         this.brushColor = Color.black; // initialize color to black
         this.drawingPoint = new Stack<>();
@@ -198,9 +198,8 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 try{
                    String messageFromServer = "";
                    while(socket.isConnected() && (messageFromServer = reader.readLine()) != null){
-                       messageFromServer.trim();
-                       processMessage(messageFromServer);
-                       checkClientListMessage(messageFromServer);
+                       processMessage(messageFromServer.trim());
+                       checkClientListMessage(messageFromServer.trim());
                    }
                 }catch(IOException e){
                     closeEverything(socket, reader, writer);
@@ -214,6 +213,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         // initialize the document style for the chat and scoreboard text pane
         chatDoc = chatPane.getStyledDocument();
         scoreBoardDoc = scoreBoardPane.getStyledDocument();
+        rankPaneDoc = rankPane.getStyledDocument();
         
         String[] message = receivedMessage.split(",");
        
@@ -310,7 +310,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
             case "GUESSED": // if the player got the right guess
                 secretWordLabel.setText(message[1]);
                 chatInpuTextField.setEditable(false); // disable the input to prevent cheating
-                playAudio("assets/guess.wav");
+                
                 break;
             case "ON-GOING-JOINED":  // if the player joined in on-going game
                 roundLabel.setText(message[1]);
@@ -336,6 +336,9 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 break;
             case "SERVER-DOWN":
                 JOptionPane.showMessageDialog(this, "Disconnected: Server has shut down!", "Error", JOptionPane.ERROR_MESSAGE);
+                break;
+            case "PLAYER-GUESSED-CORRECTLY":
+                playAudio("assets/guess.wav");
                 break;
                 
         }
@@ -389,6 +392,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         } catch (BadLocationException e) {
             System.err.println(e);
         }
+        scrollToBottom();
     }
     
     // append messages from clients or server to textPane
@@ -473,6 +477,9 @@ public class GameClient extends JFrame implements MouseMotionListener {
                     .append(playerInfo[2])
                     .append(" points").append(" ").append(winnerEmoji).append("\n");
         }
+       
+        StyleConstants.setAlignment(attrCenter, StyleConstants.ALIGN_CENTER);
+        rankPaneDoc.setParagraphAttributes(0, rankPaneDoc.getLength(), attrCenter, false);
         // set the stringbuilder text to the textPane
         rankPane.setText(rankBoardStringBuilder.toString());
     
@@ -488,7 +495,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private void updateDrawingTimer(String time){
         int seconds = Integer.parseInt(time);
         SwingUtilities.invokeLater(() -> {
-             if(seconds < 10){
+             if(seconds <= 10){
                  playAudio("assets/timer.wav");
              }
              timerLabel.setText(time);
@@ -527,7 +534,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
            
             serverLabelText.setForeground(Color.white);
             serverLabelText.setText(message[1].toUpperCase());
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 20));
+            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 24));
             serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
             roundDialog.add(serverLabelText);
             // remove the window buttons and bars
@@ -549,7 +556,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         SwingUtilities.invokeLater(() -> {
            
             serverLabelText.setForeground(Color.white);
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 18));
+            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 24));
             serverLabelText.setText(message[1]);
             serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
             serverChoosingWordDialog.add(serverLabelText);
@@ -569,7 +576,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         SwingUtilities.invokeLater(() -> {
             
             serverLabelText.setForeground(Color.white);
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 18));
+            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 24));
             serverLabelText.setText(message[1]);
             serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
             revealWordDialog.add(serverLabelText);
@@ -586,7 +593,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private void showRankListDialog(String[] message){
         SwingUtilities.invokeLater(() -> {
             winnerLabelText.setForeground(Color.white);
-            winnerLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 22));
+            winnerLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 26));
             winnerLabelText.setText(message[1].replace("#1", ""));
             winnerLabelText.setHorizontalAlignment(SwingConstants.CENTER);
             declareFinalRanksDialog.setLayout(new BorderLayout());
@@ -604,17 +611,26 @@ public class GameClient extends JFrame implements MouseMotionListener {
     
     // audio for client
     private void playAudio(String audioName) {
-        URL resourceUrl = getClass().getResource(audioName);
-        if (resourceUrl == null) {
-            System.err.println("Audio resource not found: " + audioName);
-            return;
-        }
+        
         try{
-            File file = new File(resourceUrl.getFile());
-            AudioInputStream audioStream = AudioSystem.getAudioInputStream(file);
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioStream);
+            // Load the audio resource as a stream
+            InputStream audioStream = getClass().getResourceAsStream(audioName);
+            if (audioStream == null) {
+                System.err.println("Audio resource not found: " + audioName);
+                return;
+            }
             
+            // Convert the InputStream to a BufferedInputStream
+            AudioInputStream ais = AudioSystem.getAudioInputStream(new BufferedInputStream(audioStream));
+            Clip clip = AudioSystem.getClip();
+            clip.open(ais);
+            // Add a LineListener to stop the clip to avoid bulking resource 
+            clip.addLineListener(event -> {
+                if (event.getType() == LineEvent.Type.STOP) {
+                    System.out.println("Playback finished.");
+                    clip.close(); // Close the clip when playback is done
+                }
+            });
             clip.start();
             
         }catch(UnsupportedAudioFileException | IOException | LineUnavailableException e){
@@ -625,6 +641,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     // INIT COMPONENTS CODE HERE ->
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
+        java.awt.GridBagConstraints gridBagConstraints;
 
         jPanel1 = new JPanel(){
             @Override
@@ -636,6 +653,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 }
             }
         };
+        jPanel2 = new javax.swing.JPanel();
         drawingPanel = new JPanel(){
             @Override
             protected void paintComponent(Graphics g) {
@@ -657,10 +675,10 @@ public class GameClient extends JFrame implements MouseMotionListener {
         //  -- added paintComponent method for the drawing functionality);
     chatInpuTextField = new javax.swing.JTextField();
     gameStatusPanel = new javax.swing.JPanel();
-    timerLabel = new javax.swing.JLabel();
     roundLabel = new javax.swing.JLabel();
-    secretWordLabel = new javax.swing.JLabel();
+    timerLabel = new javax.swing.JLabel();
     clockImageHolder = new javax.swing.JLabel();
+    secretWordLabel = new javax.swing.JLabel();
     jScrollPane2 = new javax.swing.JScrollPane();
     chatPane = new javax.swing.JTextPane();
     jScrollPane3 = new javax.swing.JScrollPane();
@@ -690,10 +708,16 @@ public class GameClient extends JFrame implements MouseMotionListener {
     setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
     setTitle("DoodleDuel");
     setBackground(new java.awt.Color(255, 255, 255));
-    setResizable(false);
+    setMinimumSize(new java.awt.Dimension(1200, 700));
 
     jPanel1.setBackground(new java.awt.Color(0, 65, 108));
+    jPanel1.setMinimumSize(new java.awt.Dimension(1200, 700));
     jPanel1.setPreferredSize(new java.awt.Dimension(1200, 700));
+    jPanel1.setLayout(new java.awt.GridBagLayout());
+
+    jPanel2.setBackground(new java.awt.Color(0, 204, 204));
+    jPanel2.setOpaque(false);
+    jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
     drawingPanel.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -701,13 +725,17 @@ public class GameClient extends JFrame implements MouseMotionListener {
     drawingPanel.setLayout(drawingPanelLayout);
     drawingPanelLayout.setHorizontalGroup(
         drawingPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGap(0, 765, Short.MAX_VALUE)
+        .addGap(0, 792, Short.MAX_VALUE)
     );
     drawingPanelLayout.setVerticalGroup(
         drawingPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGap(0, 506, Short.MAX_VALUE)
+        .addGap(0, 0, Short.MAX_VALUE)
     );
 
+    jPanel2.add(drawingPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(243, 125, -1, 493));
+    drawingPanel.getAccessibleContext().setAccessibleName("");
+
+    chatInpuTextField.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
     chatInpuTextField.setToolTipText("Type here...");
     chatInpuTextField.addActionListener(new java.awt.event.ActionListener() {
         public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -719,23 +747,20 @@ public class GameClient extends JFrame implements MouseMotionListener {
             chatInpuTextFieldKeyPressed(evt);
         }
     });
+    jPanel2.add(chatInpuTextField, new org.netbeans.lib.awtextra.AbsoluteConstraints(1058, 481, 302, 36));
+    chatInpuTextField.getAccessibleContext().setAccessibleName("");
 
     gameStatusPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-    timerLabel.setFont(new java.awt.Font("Comic Sans MS", 3, 18)); // NOI18N
-    timerLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-    timerLabel.setText("0");
-    timerLabel.setToolTipText("");
-
-    roundLabel.setFont(new java.awt.Font("Segoe UI Emoji", 0, 18)); // NOI18N
+    roundLabel.setFont(new java.awt.Font("Segoe UI Emoji", 0, 21)); // NOI18N
     roundLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
     roundLabel.setText("Round 1 out of 3");
     roundLabel.setToolTipText("");
 
-    secretWordLabel.setBackground(new java.awt.Color(255, 255, 255));
-    secretWordLabel.setFont(new java.awt.Font("Comic Sans MS", 0, 20)); // NOI18N
-    secretWordLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-    secretWordLabel.setText("WORD");
+    timerLabel.setFont(new java.awt.Font("Comic Sans MS", 3, 20)); // NOI18N
+    timerLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+    timerLabel.setText("0");
+    timerLabel.setToolTipText("");
 
     // load the image
     ImageIcon originalClockIcon = new ImageIcon(getClass().getResource("assets/alarmClock.png"));
@@ -746,49 +771,62 @@ public class GameClient extends JFrame implements MouseMotionListener {
     ImageIcon scaledIcon = new ImageIcon(scaledImage);
     clockImageHolder.setIcon(scaledIcon);
 
+    secretWordLabel.setBackground(new java.awt.Color(255, 255, 255));
+    secretWordLabel.setFont(new java.awt.Font("Comic Sans MS", 0, 24)); // NOI18N
+    secretWordLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    secretWordLabel.setText("WORD");
+
     javax.swing.GroupLayout gameStatusPanelLayout = new javax.swing.GroupLayout(gameStatusPanel);
     gameStatusPanel.setLayout(gameStatusPanelLayout);
     gameStatusPanelLayout.setHorizontalGroup(
         gameStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGroup(gameStatusPanelLayout.createSequentialGroup()
-            .addGap(17, 17, 17)
-            .addComponent(clockImageHolder, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addGap(18, 18, 18)
+        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, gameStatusPanelLayout.createSequentialGroup()
+            .addGap(14, 14, 14)
+            .addComponent(clockImageHolder, javax.swing.GroupLayout.PREFERRED_SIZE, 83, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGap(30, 30, 30)
             .addComponent(timerLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 109, Short.MAX_VALUE)
-            .addComponent(secretWordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 618, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addGap(101, 101, 101)
-            .addComponent(roundLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 235, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 183, Short.MAX_VALUE)
+            .addComponent(secretWordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 599, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGap(153, 153, 153)
+            .addComponent(roundLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 224, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addContainerGap())
     );
     gameStatusPanelLayout.setVerticalGroup(
         gameStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, gameStatusPanelLayout.createSequentialGroup()
+        .addGroup(gameStatusPanelLayout.createSequentialGroup()
             .addContainerGap()
             .addGroup(gameStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, gameStatusPanelLayout.createSequentialGroup()
-                    .addComponent(clockImageHolder, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGap(10, 10, 10))
-                .addGroup(gameStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(roundLabel, javax.swing.GroupLayout.DEFAULT_SIZE, 63, Short.MAX_VALUE)
-                    .addComponent(secretWordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(timerLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)))
-            .addContainerGap())
+                .addGroup(gameStatusPanelLayout.createSequentialGroup()
+                    .addGap(4, 4, 4)
+                    .addGroup(gameStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(roundLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(secretWordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(timerLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addComponent(clockImageHolder, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE))
+            .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
 
-    timerLabel.getAccessibleContext().setAccessibleName("");
     roundLabel.getAccessibleContext().setAccessibleName("");
+    timerLabel.getAccessibleContext().setAccessibleName("");
     secretWordLabel.getAccessibleContext().setAccessibleName("");
+
+    jPanel2.add(gameStatusPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(6, 14, 1354, -1));
+    gameStatusPanel.getAccessibleContext().setAccessibleName("gameDetailsPanel");
 
     chatPane.setEditable(false);
     chatPane.setBackground(new java.awt.Color(255, 255, 255));
     chatPane.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(255, 255, 255), 1, true));
+    chatPane.setFont(new java.awt.Font("Segoe UI", 0, 17)); // NOI18N
     jScrollPane2.setViewportView(chatPane);
+
+    jPanel2.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(1058, 125, 300, 344));
 
     scoreBoardPane.setEditable(false);
     scoreBoardPane.setBackground(new java.awt.Color(255, 255, 255));
-    scoreBoardPane.setFont(new java.awt.Font("Segoe UI Emoji", 0, 14)); // NOI18N
+    scoreBoardPane.setFont(new java.awt.Font("Segoe UI Emoji", 0, 19)); // NOI18N
     jScrollPane3.setViewportView(scoreBoardPane);
+
+    jPanel2.add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(6, 125, 218, 456));
 
     DrawingPanelTools.setBackground(new java.awt.Color(0, 65, 108));
     DrawingPanelTools.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
@@ -880,7 +918,6 @@ public class GameClient extends JFrame implements MouseMotionListener {
     });
 
     skinColorbtn.setBackground(new java.awt.Color(241, 194, 125));
-    skinColorbtn.setActionCommand("");
     skinColorbtn.addActionListener(new java.awt.event.ActionListener() {
         public void actionPerformed(java.awt.event.ActionEvent evt) {
             skinColorbtnActionPerformed(evt);
@@ -989,11 +1026,11 @@ public class GameClient extends JFrame implements MouseMotionListener {
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(UndoBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap())
+                    .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
                     .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                    .addGap(0, 0, Short.MAX_VALUE)))
+            .addContainerGap())
     );
     DrawingPanelToolsLayout.setVerticalGroup(
         DrawingPanelToolsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1008,8 +1045,10 @@ public class GameClient extends JFrame implements MouseMotionListener {
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addComponent(colorsBtnPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addContainerGap(12, Short.MAX_VALUE))
+            .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
+
+    jPanel2.add(DrawingPanelTools, new org.netbeans.lib.awtextra.AbsoluteConstraints(242, 630, -1, -1));
 
     startGameBtn.setBackground(new java.awt.Color(153, 255, 102));
     startGameBtn.setText("START");
@@ -1018,74 +1057,27 @@ public class GameClient extends JFrame implements MouseMotionListener {
             startGameBtnActionPerformed(evt);
         }
     });
+    jPanel2.add(startGameBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(6, 587, 218, 31));
 
     panelDialog.setLayout(new javax.swing.OverlayLayout(panelDialog));
+    jPanel2.add(panelDialog, new org.netbeans.lib.awtextra.AbsoluteConstraints(683, 360, -1, -1));
 
-    javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-    jPanel1.setLayout(jPanel1Layout);
-    jPanel1Layout.setHorizontalGroup(
-        jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGroup(jPanel1Layout.createSequentialGroup()
-            .addGap(33, 33, 33)
-            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addComponent(gameStatusPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 181, Short.MAX_VALUE)
-                            .addComponent(startGameBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addGroup(jPanel1Layout.createSequentialGroup()
-                            .addGap(6, 6, 6)
-                            .addComponent(panelDialog, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGap(18, 18, 18)
-                    .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(chatInpuTextField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE))))
-            .addContainerGap(26, Short.MAX_VALUE))
-        .addGroup(jPanel1Layout.createSequentialGroup()
-            .addGap(183, 183, 183)
-            .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-    );
-    jPanel1Layout.setVerticalGroup(
-        jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGroup(jPanel1Layout.createSequentialGroup()
-            .addGap(47, 47, 47)
-            .addComponent(gameStatusPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addGap(55, 55, 55)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 321, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(chatInpuTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addComponent(drawingPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGroup(jPanel1Layout.createSequentialGroup()
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 450, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(startGameBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addComponent(panelDialog, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-            .addGap(18, 18, 18)
-            .addComponent(DrawingPanelTools, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addContainerGap(42, Short.MAX_VALUE))
-    );
-
-    drawingPanel.getAccessibleContext().setAccessibleName("");
-    chatInpuTextField.getAccessibleContext().setAccessibleName("");
-    gameStatusPanel.getAccessibleContext().setAccessibleName("gameDetailsPanel");
+    gridBagConstraints = new java.awt.GridBagConstraints();
+    gridBagConstraints.gridx = 0;
+    gridBagConstraints.gridy = 0;
+    gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
+    gridBagConstraints.insets = new java.awt.Insets(47, 31, 48, 36);
+    jPanel1.add(jPanel2, gridBagConstraints);
 
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
     getContentPane().setLayout(layout);
     layout.setHorizontalGroup(
         layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 1300, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 1379, Short.MAX_VALUE)
     );
     layout.setVerticalGroup(
         layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 788, Short.MAX_VALUE)
+        .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 805, Short.MAX_VALUE)
     );
 
     pack();
@@ -1237,6 +1229,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private javax.swing.JButton greenBtn;
     private javax.swing.JButton greyBtn;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JButton magentaBtn;
