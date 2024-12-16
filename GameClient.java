@@ -3,6 +3,7 @@ package skribbl_clone;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -28,6 +29,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextPane;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
@@ -48,7 +50,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private DrawPoint drawPoint;
    
     // for styling the textPane
-    StyledDocument chatDoc,scoreBoardDoc,rankPaneDoc;
+    StyledDocument chatDoc,scoreBoardDoc,rankPaneDoc,subRoundDoc;
   
     SimpleAttributeSet attrBold = new SimpleAttributeSet();
     SimpleAttributeSet attrNormal = new SimpleAttributeSet();
@@ -61,29 +63,21 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private int pointsToRemove = 10;
     Point point; 
     Color color;
-    StringBuilder rankBoardStringBuilder;
+    StringBuilder rankBoardStringBuilder, subRoundStringBuilder;
     JDialog roundDialog, serverChoosingWordDialog, revealWordDialog, declareFinalRanksDialog;
-    JLabel serverLabelText, winnerLabelText;
+    JLabel serverLabelText, winnerLabelText, revealWordLabelText;
     private Image backgroundImage;
-    JTextPane rankPane;
-   
+    JTextPane rankPane, subRoundSummaryPane;
+    int fontSize;
+    Dimension dimension;
+    
     
     public GameClient(Socket socket, String username) {
         setBackgroundImage("assets/gameplayBg.png");
-        serverLabelText = new JLabel();
-        winnerLabelText = new JLabel();
-        roundDialog = new JDialog();
-        revealWordDialog = new JDialog();
-        serverChoosingWordDialog = new JDialog();
-        declareFinalRanksDialog = new JDialog();
-        rankPane = new JTextPane();
-        rankPane.setEditable(false);
-        rankPane.setForeground(Color.white);
-        rankPane.setBackground(new Color(59, 59, 59));
-        rankPane.setFont(new java.awt.Font("Comic sans MS", 0, 23));
+        initDialogComponents();
         this.brushSize = 13; // initialize brush size to 13
         this.brushColor = Color.black; // initialize color to black
-        this.drawingPoint = new Stack<>();
+        this.drawingPoint = new Stack<>(); // use the stacks for the drawing points (LAST IN FIRST OUT)
         this.socket = socket;
         this.username = username;
         try{
@@ -96,9 +90,32 @@ public class GameClient extends JFrame implements MouseMotionListener {
             closeEverything(socket, reader, writer);
         }
         initComponents();
+        roundTitleLabel.setVisible(false);
         startGameBtn.setVisible(false); // initualize host button as not visible
+        customRound.setVisible(false);
         DrawingPanelTools.setVisible(false); // initialize drawing panel tools as not visible
     }
+    
+    private void initDialogComponents(){
+        serverLabelText = new JLabel();
+        winnerLabelText = new JLabel();
+        revealWordLabelText = new JLabel();
+        roundDialog = new JDialog();
+        revealWordDialog = new JDialog();
+        serverChoosingWordDialog = new JDialog();
+        declareFinalRanksDialog = new JDialog();
+        rankPane = new JTextPane();
+        rankPane.setEditable(false);
+        rankPane.setForeground(Color.white);
+        rankPane.setBackground(new Color(59, 59, 59));
+        rankPane.setFont(new java.awt.Font("Comic sans MS", 0, 23));
+        subRoundSummaryPane = new JTextPane();
+        subRoundSummaryPane.setEditable(false);
+        subRoundSummaryPane.setForeground(Color.white);
+        subRoundSummaryPane.setBackground(new Color(59, 59, 59));
+        subRoundSummaryPane.setFont(new java.awt.Font("Comic sans MS", 0, 23));
+    }
+    
     
     // switch the ability to draw if playerID were not met
     private void turnToDraw(int playerID){
@@ -169,11 +186,14 @@ public class GameClient extends JFrame implements MouseMotionListener {
     // determine to hide or unhide the start button
     private void hideHostBtn(){
         startGameBtn.setVisible(false);
-        
+        customRound.setVisible(false);
+        roundTitleLabel.setVisible(false);
     }
     private void showHostBtn(){
         if(hostStatus){
             startGameBtn.setVisible(true);
+            customRound.setVisible(true);
+            roundTitleLabel.setVisible(true);
         }
         
     }
@@ -214,6 +234,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         chatDoc = chatPane.getStyledDocument();
         scoreBoardDoc = scoreBoardPane.getStyledDocument();
         rankPaneDoc = rankPane.getStyledDocument();
+        subRoundDoc = subRoundSummaryPane.getStyledDocument();
         
         String[] message = receivedMessage.split(",");
        
@@ -301,7 +322,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 updateTimer("0");
                 showHostBtn();
                 secretWordLabel.setText("WORD");
-                roundLabel.setText("Round 1 out of 3");
+                roundLabel.setText("Round 1 out of ?");
                 turnToDraw(0);
                 serverChoosingWordDialog.dispose();
                 roundDialog.dispose();
@@ -356,6 +377,10 @@ public class GameClient extends JFrame implements MouseMotionListener {
         if(message.startsWith("RANK-LIST:")){
             System.out.println("RANK-LIST " +message.substring("RANK-LIST:".length()));
             evaluateRankMessage(message.substring("RANK-LIST:".length()));
+        }
+        if(message.startsWith("SUB-ROUND-LIST:")){
+            System.out.println("SUB-ROUND-LIST " + message.substring("SUB-ROUND-LIST:".length()));
+            evalauteSubRoundMessage(message.substring("SUB-ROUND-LIST:".length()));
         }
     }
     
@@ -462,6 +487,9 @@ public class GameClient extends JFrame implements MouseMotionListener {
        
     }
     
+    
+    
+    // evalute the final scores of the player in the end
     private void evaluateRankMessage(String message){
         rankBoardStringBuilder = new StringBuilder(); // initialize new StringBuilder
         // split the message using ; as delimiter to split each players details
@@ -483,6 +511,24 @@ public class GameClient extends JFrame implements MouseMotionListener {
         // set the stringbuilder text to the textPane
         rankPane.setText(rankBoardStringBuilder.toString());
     
+    }
+    
+    private void evalauteSubRoundMessage(String message){
+        // repeat the process from rank message
+        subRoundStringBuilder = new StringBuilder();
+        String[] players = message.split(";");
+        for(String player : players){
+            // split each player using , as delimiter 
+            // append each player details to one string using string builder 
+            String[] playerInfo = player.split(",");
+            String status = Integer.parseInt(playerInfo[1]) != 0 ? "+" : "-"; // add sign to indicate if the players gain or not
+            subRoundStringBuilder.append(playerInfo[0]).append(" : ").append(status).append(playerInfo[1]).append("\n");
+        }
+       
+        StyleConstants.setAlignment(attrCenter, StyleConstants.ALIGN_CENTER);
+        subRoundDoc.setParagraphAttributes(0, subRoundDoc.getLength(), attrCenter, false);
+        // set the stringbuilder text to the textPane
+        subRoundSummaryPane.setText(subRoundStringBuilder.toString());
     }
     
     private void updateTimer(String seconds){
@@ -574,12 +620,14 @@ public class GameClient extends JFrame implements MouseMotionListener {
         // use the swingUtilities.invokeLater to prevent the GUI freeze and
         // update the gui on separate thread 
         SwingUtilities.invokeLater(() -> {
-            
-            serverLabelText.setForeground(Color.white);
-            serverLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 24));
-            serverLabelText.setText(message[1]);
-            serverLabelText.setHorizontalAlignment(SwingConstants.CENTER);
-            revealWordDialog.add(serverLabelText);
+            revealWordLabelText.setForeground(Color.white);
+            revealWordLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 24));
+            revealWordLabelText.setText(message[1]);
+            revealWordLabelText.setHorizontalAlignment(SwingConstants.CENTER);
+            revealWordDialog.setLayout(new BorderLayout(10,10));
+            revealWordLabelText.setBorder(new EmptyBorder(25, 0, 0, 0));
+            revealWordDialog.add(revealWordLabelText,BorderLayout.NORTH);
+            revealWordDialog.add(subRoundSummaryPane,BorderLayout.CENTER);
             revealWordDialog.setUndecorated(true);
             revealWordDialog.getContentPane().setBackground(new Color(59,59,59));
             revealWordDialog.setModal(true);
@@ -593,10 +641,11 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private void showRankListDialog(String[] message){
         SwingUtilities.invokeLater(() -> {
             winnerLabelText.setForeground(Color.white);
-            winnerLabelText.setFont(new Font("Comic sans MS", Font.BOLD, 26));
+            winnerLabelText.setFont(new Font("Segoe UI Emoji", Font.BOLD, 26));
             winnerLabelText.setText(message[1].replace("#1", ""));
             winnerLabelText.setHorizontalAlignment(SwingConstants.CENTER);
-            declareFinalRanksDialog.setLayout(new BorderLayout());
+            declareFinalRanksDialog.setLayout(new BorderLayout(10,10));
+            winnerLabelText.setBorder(new EmptyBorder(25, 0, 0, 0));
             declareFinalRanksDialog.add(winnerLabelText,BorderLayout.NORTH);
             declareFinalRanksDialog.add(rankPane,BorderLayout.CENTER);
             declareFinalRanksDialog.setUndecorated(true);
@@ -704,6 +753,8 @@ public class GameClient extends JFrame implements MouseMotionListener {
     UndoBtn = new javax.swing.JButton();
     startGameBtn = new javax.swing.JButton();
     panelDialog = new javax.swing.JPanel();
+    customRound = new javax.swing.JComboBox<>();
+    roundTitleLabel = new javax.swing.JLabel();
 
     setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
     setTitle("DoodleDuel");
@@ -729,7 +780,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     );
     drawingPanelLayout.setVerticalGroup(
         drawingPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-        .addGap(0, 0, Short.MAX_VALUE)
+        .addGap(0, 493, Short.MAX_VALUE)
     );
 
     jPanel2.add(drawingPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(243, 125, -1, 493));
@@ -754,7 +805,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
 
     roundLabel.setFont(new java.awt.Font("Segoe UI Emoji", 0, 21)); // NOI18N
     roundLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-    roundLabel.setText("Round 1 out of 3");
+    roundLabel.setText("Round 1 out of ?");
     roundLabel.setToolTipText("");
 
     timerLabel.setFont(new java.awt.Font("Comic Sans MS", 3, 20)); // NOI18N
@@ -823,7 +874,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
 
     scoreBoardPane.setEditable(false);
     scoreBoardPane.setBackground(new java.awt.Color(255, 255, 255));
-    scoreBoardPane.setFont(new java.awt.Font("Segoe UI Emoji", 0, 19)); // NOI18N
+    scoreBoardPane.setFont(new java.awt.Font("Segoe UI Emoji", 0, 18)); // NOI18N
     jScrollPane3.setViewportView(scoreBoardPane);
 
     jPanel2.add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(6, 125, 218, 456));
@@ -955,7 +1006,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
             .addComponent(brownBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
             .addComponent(skinColorbtn, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
-            .addGap(0, 71, Short.MAX_VALUE))
+            .addGap(0, 26, Short.MAX_VALUE))
     );
     colorsBtnPanelLayout.setVerticalGroup(
         colorsBtnPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1022,15 +1073,13 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
                     .addComponent(brushSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                    .addComponent(colorsBtnPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addComponent(colorsBtnPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                     .addComponent(UndoBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(clearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(DrawingPanelToolsLayout.createSequentialGroup()
-                    .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, Short.MAX_VALUE)))
-            .addContainerGap())
+                .addComponent(brushSizeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE))
+            .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
     );
     DrawingPanelToolsLayout.setVerticalGroup(
         DrawingPanelToolsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1062,11 +1111,28 @@ public class GameClient extends JFrame implements MouseMotionListener {
     panelDialog.setLayout(new javax.swing.OverlayLayout(panelDialog));
     jPanel2.add(panelDialog, new org.netbeans.lib.awtextra.AbsoluteConstraints(683, 360, -1, -1));
 
+    customRound.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+    customRound.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "2", "3", "4", "6", "8", "10", " " }));
+    customRound.setSelectedIndex(1);
+    customRound.setSelectedItem(1);
+    customRound.addActionListener(new java.awt.event.ActionListener() {
+        public void actionPerformed(java.awt.event.ActionEvent evt) {
+            customRoundActionPerformed(evt);
+        }
+    });
+    jPanel2.add(customRound, new org.netbeans.lib.awtextra.AbsoluteConstraints(112, 630, 110, -1));
+
+    roundTitleLabel.setFont(new java.awt.Font("Comic Sans MS", 0, 18)); // NOI18N
+    roundTitleLabel.setForeground(new java.awt.Color(255, 255, 255));
+    roundTitleLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    roundTitleLabel.setText("Rounds:");
+    jPanel2.add(roundTitleLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 630, 90, -1));
+
     gridBagConstraints = new java.awt.GridBagConstraints();
     gridBagConstraints.gridx = 0;
     gridBagConstraints.gridy = 0;
     gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-    gridBagConstraints.insets = new java.awt.Insets(47, 31, 48, 36);
+    gridBagConstraints.insets = new java.awt.Insets(52, 7, 53, 12);
     jPanel1.add(jPanel2, gridBagConstraints);
 
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -1174,7 +1240,8 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private void startGameBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startGameBtnActionPerformed
         // TODO add your handling code here:
         if(hostStatus){
-             writer.println("START-GAME");
+             writer.println("START-GAME," + customRound.getSelectedItem());
+             writer.println();
         }
        
     }//GEN-LAST:event_startGameBtnActionPerformed
@@ -1188,6 +1255,11 @@ public class GameClient extends JFrame implements MouseMotionListener {
         // TODO add your handling code here:
         brushColor = new Color(241,194,125);
     }//GEN-LAST:event_skinColorbtnActionPerformed
+
+    private void customRoundActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_customRoundActionPerformed
+        // TODO add your handling code here:
+        roundLabel.setText("Round 1 out of " + customRound.getSelectedItem());
+    }//GEN-LAST:event_customRoundActionPerformed
     
     
     
@@ -1223,6 +1295,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private javax.swing.JButton clearBtn;
     private javax.swing.JLabel clockImageHolder;
     private javax.swing.JPanel colorsBtnPanel;
+    private javax.swing.JComboBox<String> customRound;
     private javax.swing.JButton cyanBtn;
     private javax.swing.JPanel drawingPanel;
     private javax.swing.JPanel gameStatusPanel;
@@ -1238,6 +1311,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     private javax.swing.JButton pinkBtn;
     private javax.swing.JButton redBtn;
     private javax.swing.JLabel roundLabel;
+    private javax.swing.JLabel roundTitleLabel;
     private javax.swing.JTextPane scoreBoardPane;
     private javax.swing.JLabel secretWordLabel;
     private javax.swing.JButton skinColorbtn;

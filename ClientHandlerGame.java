@@ -82,7 +82,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
                 break;
             // a command sent by the client that is host
             case "START-GAME":
-                gameServer.startGame(messageFromClient, this);
+                gameServer.startGame(message[1], this);
                 break;
         }
         

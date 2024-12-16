@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.concurrent.*;
 
 
@@ -17,19 +18,20 @@ public class GameServer {
     private ArrayList<ClientHandlerGame> players;
     private ArrayList<String> drawHistory;
     private ArrayList<String> playerDetails;
+    private HashMap<String,Integer> playerSubRoundScores;
     private ArrayList<ClientHandlerGame> sortedPlayers;
     private int currentPlayerIndexTurn;
-    private final int MAX_ROUND = 3;
+    private int MAX_ROUND = 3; // 3 is the default
     private final int MAX_PLAYERS = 8;
     private int currentRound = 1;
     private String currentSecretWord = "";
     // to manage timer in each thread, server we use  the ScheduledExecutorService class 
-    // to handle the synchronization of time update to all clients in a single thread so it will not blocks the server thread
+    // to handle the synchronization of time update to all clients in a single thread so it will not block the server thread
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> timerTask; // reference to cancel the timer
-    private final int DRAWING_TIME = 80;
+    private final int DRAWING_TIME = 50;
     private final int CHOOSING_WORD_TIME = 3;
-    private final int REVEAL_WORD_TIME = 3;
+    private final int REVEAL_WORD_TIME = 5;
     private final int ROUND_ANNOUNCING_TIME = 3;
     private final int RANK_ANNOUNCING_TIME = 15;
     private int correct_guesses = 0;
@@ -39,6 +41,7 @@ public class GameServer {
         players = new ArrayList<>();
         wordDictionary = new WordDictionary();
         drawHistory = new ArrayList<>();
+        playerSubRoundScores = new HashMap<>();
     }
     
     private void startServer(){
@@ -57,6 +60,8 @@ public class GameServer {
                 // create threads instances to each client objects
                 Thread thread = new Thread(player);
                 thread.start();
+                // initialize the player in the hashmap to still display if they did not guess
+                playerSubRoundScores.put(player.getUsername(), 0);
                 
                 
             }
@@ -73,6 +78,7 @@ public class GameServer {
         if(players.size() > 1 && host.getHostStatus() != false){
             host.notifyPlayer("HOST-COMMAND,GAME-STARTED");
             // method to start the game
+            MAX_ROUND = Integer.parseInt(command);
             startAnnouncingRoundPhase();
         }
         else{
@@ -97,7 +103,7 @@ public class GameServer {
         int[] remainingTime = {ROUND_ANNOUNCING_TIME};
         System.out.println("Round : " + currentRound + " Starting");
         // broadcast to all clients what round it is
-        broadcastMessage("ROUND-STATE,ROUND "+currentRound+",Round "+currentRound+" out of 3");
+        broadcastMessage("ROUND-STATE,ROUND "+currentRound+",Round "+currentRound+" out of "+MAX_ROUND);
         // announce it for three seconds
         timerTask = timer.scheduleAtFixedRate(() -> {
             // check if only one player left each second of the timer 
@@ -260,6 +266,7 @@ public class GameServer {
     }
     
     private void revealSecretWordPhase(){
+        
         if(onePlayerLeft()){
             System.out.println("Game stopped before taking turns");
             // broadcast a message to clients to update their interface that the game stopped
@@ -272,6 +279,7 @@ public class GameServer {
         }
         int[] remainingTime = {REVEAL_WORD_TIME};
         System.out.println("Revealing word phase..");
+        broadcastSubRoundPlayerList(); // broadcast the sub round player points gain
         broadcastMessage("TURN-DRAW," + 0); // hide the drawing tools to all players
         broadcastMessage("REVEAL-WORD-STATE,The word was '"+currentSecretWord+"',"+currentSecretWord);
         // schedule a task to broadcast the remaining time every second
@@ -295,6 +303,7 @@ public class GameServer {
             } else {
                 timerTask.cancel(false); // Stop this task to prevent task overlapping 
                 broadcastMessage("REMOVE-REVEAL-DIALOG");
+                resetPlayersSubRoundScores();
                 endPlayerTurn(); // invoke next turn if timer ended
             }
 
@@ -371,14 +380,17 @@ public class GameServer {
     // evaluate guess from players
     public void evaluateGuess(String guessFromClient, ClientHandlerGame player){
         String[] message = guessFromClient.split(",");
-            
+        ClientHandlerGame drawer = returnPlayerDrawer();
+        playerSubRoundScores.put(drawer.getUsername(), 0); // initialize drawer in the hashmap in case there were no player guessed correctly
         if(checkIfCorrectGuess(message[2])){
             // increment the score of the player and the player who is drawing
-            ClientHandlerGame drawer = returnPlayerDrawer();
-            player.incrementScore(scoreWithinTimeFrame(message[3]));
+            int score = scoreWithinTimeFrame(message[3]);
+            player.incrementScore(score);
             drawer.incrementScore(40); // 40 for drawer for each player guessed correctly
             player.setGuessedCorrectly(true); // set guess correctly to true to reflect green background in the client side
             // add a scoring based system after testing
+            playerSubRoundScores.put(drawer.getUsername(), 40); // overwrite the drawer point value
+            playerSubRoundScores.put(player.getUsername(), score); // put the point that the player has scored in the current sub-round
             broadcastMessage("ANNOUNCEMENT,GUESS,"+player.getUsername()+" Guessed the Word!");
             player.notifyPlayer("GUESSED,"+currentSecretWord); // reveal the word to the player
             broadcastMessage("PLAYER-GUESSED-CORRECTLY");
@@ -387,6 +399,7 @@ public class GameServer {
             // end the turn if all players guessed the secret word
             // the player who is drawing not counted
             if(correct_guesses == (players.size() - 1)){
+                broadcastSubRoundPlayerList(); // broadcast to each client the sub round summary
                 resetGuessCorrectlyStatus(); // reset the guess correctly status to remove green background
                 broadcastMessage("CLEAR-DRAWING"); // clear panel if all players were guessed correctly
                 System.out.println("all players guessed the word!");
@@ -400,6 +413,8 @@ public class GameServer {
             
         }
         else{
+            // put the player who guesses wrong and their points as zero
+            playerSubRoundScores.put(player.getUsername(),0);
             // if player guess were wrong, it would be broadcasted
             broadcastMessage(guessFromClient);
             System.out.println("test secretword: " + currentSecretWord);
@@ -515,6 +530,14 @@ public class GameServer {
         }
     }
     
+    private void resetPlayersSubRoundScores(){
+        for(String player : playerSubRoundScores.keySet()){
+            // update all the  value of  the key in the hashmap to be 0
+            playerSubRoundScores.put(player,0);
+        }
+    
+    }
+    
     // broadcast message to other clients
     public void broadcastMessage(String messageFromClient,ClientHandlerGame client){
         for(ClientHandlerGame player : players){
@@ -544,7 +567,7 @@ public class GameServer {
             if (gameStarted) {
                 System.out.println(player.getUsername() + " joined in the middle of the Game!");
                 // broadcast the round status and the current secret word
-                player.notifyPlayer("ON-GOING-JOINED,Round " + currentRound + " out of 3");
+                player.notifyPlayer("ON-GOING-JOINED,Round " + currentRound + " out of "+MAX_ROUND);
                 player.notifyPlayer("SECRET-WORD," + maskSecretWord(currentSecretWord));
                 // send the drawing history to player
                 sendDrawingHistory(player);
@@ -586,6 +609,8 @@ public class GameServer {
             endPlayerTurn();
         }
         players.remove(player);
+        playerSubRoundScores.remove(player.getUsername()); // remove the player from the hashmap
+        
         // reassign host if the player who left is the host
         assignPlayerHost();
         // update the scoreboard (player list)
@@ -616,11 +641,24 @@ public class GameServer {
         }
     }
     
+    public void broadcastSubRoundPlayerList(){
+        playerDetails = new ArrayList<>();
+
+        for(String player : playerSubRoundScores.keySet()){
+            System.out.println("Key: " + player + "score: " + playerSubRoundScores.get(player));
+            playerDetails.add(player+","+playerSubRoundScores.get(player));
+            
+        }
+        // send the sub round summary to all players
+        for(ClientHandlerGame player : players){
+            player.sendPlayerList("SUB-ROUND-LIST:", playerDetails);
+        }
+    }
+    
     public void addDrawingPointHistory(String drawingPoint){
         drawHistory.add(drawingPoint);
     }
    
-    
     
     // close server socket
     public void closeServer(){

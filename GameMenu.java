@@ -41,11 +41,11 @@ public class GameMenu extends JFrame {
         portInput = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
+        jButton2 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setBackground(new java.awt.Color(255, 255, 255));
         setMinimumSize(new java.awt.Dimension(653, 446));
-        setPreferredSize(new java.awt.Dimension(653, 446));
 
         jPanel1.setBackground(new java.awt.Color(0, 65, 108));
         jPanel1.setMaximumSize(new java.awt.Dimension(1000, 1000));
@@ -113,6 +113,16 @@ public class GameMenu extends JFrame {
         jLabel3.setText("Port:");
         jPanel2.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(247, 270, 97, -1));
 
+        jButton2.setBackground(new java.awt.Color(204, 0, 51));
+        jButton2.setForeground(new java.awt.Color(255, 255, 255));
+        jButton2.setText("HOW TO PLAY?");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
+        jPanel2.add(jButton2, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 230, 130, 30));
+
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
@@ -139,7 +149,7 @@ public class GameMenu extends JFrame {
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         
         if (!jTextField2.getText().isEmpty() && !ipInput.getText().isEmpty() && !portInput.getText().isEmpty() 
-                && !validatePort() /*&& isValidIPAddress() */ ) {
+                && !validatePort() && jTextField2.getText().length() < 7  && isValidIPAddress() ) {
 
             String username = jTextField2.getText();
             String ip = ipInput.getText().trim();
@@ -164,6 +174,9 @@ public class GameMenu extends JFrame {
         else if(!isValidIPAddress()){
             JOptionPane.showMessageDialog(this, "IP address is invalid!", "Alert", JOptionPane.WARNING_MESSAGE);
         }
+        else{
+            JOptionPane.showMessageDialog(this, "Username must be below 6 characters!", "Alert", JOptionPane.WARNING_MESSAGE);
+        }
     }//GEN-LAST:event_jButton1ActionPerformed
     // method to validate port number
     private boolean validatePort(){
@@ -176,6 +189,9 @@ public class GameMenu extends JFrame {
     private  boolean isValidIPAddress() {
         String ip = ipInput.getText();
         String ipPattern = "^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$";
+        if(ip.equals("localhost")){
+            return true;
+        }
         return ip.matches(ipPattern);
     }
     // Method to set the background image
@@ -219,10 +235,19 @@ public class GameMenu extends JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_portInputActionPerformed
 
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        // TODO add your handling code here:
+        Instructions instructions = new Instructions();
+        instructions.setResizable(false);
+        instructions.setLocationRelativeTo(null);
+        instructions.setVisible(true);
+    }//GEN-LAST:event_jButton2ActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTextField ipInput;
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
