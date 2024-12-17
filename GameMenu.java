@@ -8,6 +8,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import static skribbl_clone.App.getScalingFactor;
 
 public class GameMenu extends JFrame {
     private Image backgroundImage;
@@ -208,15 +209,22 @@ public class GameMenu extends JFrame {
        
     }//GEN-LAST:event_jButton1KeyPressed
     private void configSocket(String username,String ip, String port){
+        // Adjust UI scale for high-DPI displays 
+        
         int portNo = Integer.parseInt(port);
         try {
+            
             // create socket object with the server ip and the server port that is listening to
             Socket socket = new Socket(ip, portNo);
+           
             GameClient gameClient = new GameClient(socket, username);
-            gameClient.setVisible(true);
             gameClient.setLocationRelativeTo(null);
+            gameClient.pack();
             // method to listen for the incoming messages
             gameClient.listenForMessage();
+            gameClient.setVisible(true);
+            
+            
             this.dispose();
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this,"Connection failed: No server available, Check if IP Address and Port is correct!","Error",JOptionPane.ERROR_MESSAGE);
@@ -237,10 +245,14 @@ public class GameMenu extends JFrame {
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         // TODO add your handling code here:
+        
         Instructions instructions = new Instructions();
         instructions.setResizable(false);
+        instructions.pack();
         instructions.setLocationRelativeTo(null);
         instructions.setVisible(true);
+      
+        
     }//GEN-LAST:event_jButton2ActionPerformed
 
 

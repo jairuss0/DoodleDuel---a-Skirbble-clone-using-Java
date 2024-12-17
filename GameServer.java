@@ -380,16 +380,19 @@ public class GameServer {
     // evaluate guess from players
     public void evaluateGuess(String guessFromClient, ClientHandlerGame player){
         String[] message = guessFromClient.split(",");
-        ClientHandlerGame drawer = returnPlayerDrawer();
-        playerSubRoundScores.put(drawer.getUsername(), 0); // initialize drawer in the hashmap in case there were no player guessed correctly
+        
         if(checkIfCorrectGuess(message[2])){
+            ClientHandlerGame drawer = returnPlayerDrawer();
             // increment the score of the player and the player who is drawing
             int score = scoreWithinTimeFrame(message[3]);
             player.incrementScore(score);
             drawer.incrementScore(40); // 40 for drawer for each player guessed correctly
+            
             player.setGuessedCorrectly(true); // set guess correctly to true to reflect green background in the client side
             // add a scoring based system after testing
-            playerSubRoundScores.put(drawer.getUsername(), 40); // overwrite the drawer point value
+            // update the value of Second
+            // Using computeIfPresent()
+            playerSubRoundScores.computeIfPresent(drawer.getUsername(), (key, oldValue) -> oldValue + 40);
             playerSubRoundScores.put(player.getUsername(), score); // put the point that the player has scored in the current sub-round
             broadcastMessage("ANNOUNCEMENT,GUESS,"+player.getUsername()+" Guessed the Word!");
             player.notifyPlayer("GUESSED,"+currentSecretWord); // reveal the word to the player

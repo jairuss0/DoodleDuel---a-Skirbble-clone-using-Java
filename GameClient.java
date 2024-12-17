@@ -3,7 +3,6 @@ package skribbl_clone;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -68,13 +67,13 @@ public class GameClient extends JFrame implements MouseMotionListener {
     JLabel serverLabelText, winnerLabelText, revealWordLabelText;
     private Image backgroundImage;
     JTextPane rankPane, subRoundSummaryPane;
-    int fontSize;
-    Dimension dimension;
     
     
+    
+   
     public GameClient(Socket socket, String username) {
         setBackgroundImage("assets/gameplayBg.png");
-        initDialogComponents();
+        
         this.brushSize = 13; // initialize brush size to 13
         this.brushColor = Color.black; // initialize color to black
         this.drawingPoint = new Stack<>(); // use the stacks for the drawing points (LAST IN FIRST OUT)
@@ -89,6 +88,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
         }catch(IOException e){
             closeEverything(socket, reader, writer);
         }
+        initDialogComponents();
         initComponents();
         roundTitleLabel.setVisible(false);
         startGameBtn.setVisible(false); // initualize host button as not visible
@@ -521,7 +521,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
             // split each player using , as delimiter 
             // append each player details to one string using string builder 
             String[] playerInfo = player.split(",");
-            String status = Integer.parseInt(playerInfo[1]) != 0 ? "+" : "-"; // add sign to indicate if the players gain or not
+            String status = Integer.parseInt(playerInfo[1]) != 0 ? "+" : ""; // add sign to indicate if the players gain or not
             subRoundStringBuilder.append(playerInfo[0]).append(" : ").append(status).append(playerInfo[1]).append("\n");
         }
        
@@ -1132,7 +1132,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
     gridBagConstraints.gridx = 0;
     gridBagConstraints.gridy = 0;
     gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-    gridBagConstraints.insets = new java.awt.Insets(52, 7, 53, 12);
+    gridBagConstraints.insets = new java.awt.Insets(17, 7, 78, 12);
     jPanel1.add(jPanel2, gridBagConstraints);
 
     javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -1279,6 +1279,7 @@ public class GameClient extends JFrame implements MouseMotionListener {
             System.err.println(e);
         }
     }
+    
     
     
 
