@@ -8,7 +8,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import static skribbl_clone.App.getScalingFactor;
 
 public class GameMenu extends JFrame {
     private Image backgroundImage;

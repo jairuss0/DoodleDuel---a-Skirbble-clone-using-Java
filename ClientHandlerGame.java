@@ -35,7 +35,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
             this.isHost = false;
             this.isTurn = false;
             this.guessCorrectly = false;
-            this.playerID = createID();
+            this.playerID = gameServer.getNextPlayerID();
             writer.println(this.playerID); // send the id to the corresponding client thread
             // add the client to the arraylist
             addClient();
@@ -84,6 +84,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
             case "START-GAME":
                 gameServer.startGame(message[1], this);
                 break;
+            
         }
         
     }
@@ -116,10 +117,7 @@ public class ClientHandlerGame implements Runnable, Comparable<ClientHandlerGame
         score += plusScore;
     }
     
-    // create simple unique id for each player
-    private int createID(){
-        return gameServer.returnPlayerListSize() + 1;
-    }
+    
     
     private void addClient(){
         gameServer.addClientHandler(this);

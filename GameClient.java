@@ -348,22 +348,32 @@ public class GameClient extends JFrame implements MouseMotionListener {
                 break;
             case "PLAYERS-MAXED":
                 JOptionPane.showMessageDialog(this, "Cannot join: The game is full!", "Error", JOptionPane.ERROR_MESSAGE);
-                GameMenu menu = new GameMenu();
-                menu.setTitle("DoodleDuel - Menu");
-                menu.setResizable(false);
-                menu.setVisible(true);
-                menu.setLocationRelativeTo(null);
-                this.dispose();
+                goBackToMenu();
                 break;
             case "SERVER-DOWN":
                 JOptionPane.showMessageDialog(this, "Disconnected: Server has shut down!", "Error", JOptionPane.ERROR_MESSAGE);
                 break;
-            case "PLAYER-GUESSED-CORRECTLY":
+            case "PLAYER-GUESSED-CORRECTLY": 
                 playAudio("assets/guess.wav");
+                break;
+            case "DUPLICATED-USERNAME":
+                JOptionPane.showMessageDialog(this, "Cannot join: Username Already Exists!", "Error", JOptionPane.ERROR_MESSAGE);
+                goBackToMenu();
                 break;
                 
         }
         
+    }
+    
+    // go back to main menu
+    private void goBackToMenu(){
+        GameMenu menu = new GameMenu();
+        menu.setTitle("DoodleDuel - Menu");
+        menu.setResizable(false);
+        menu.setVisible(true);
+        menu.setLocationRelativeTo(null);
+        this.dispose();
+    
     }
     
     // check if messages received is player list (this is for scoreboard)

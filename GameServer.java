@@ -15,11 +15,11 @@ public class GameServer {
     
     private ServerSocket server;
     private WordDictionary wordDictionary;
-    private ArrayList<ClientHandlerGame> players;
-    private ArrayList<String> drawHistory;
-    private ArrayList<String> playerDetails;
-    private HashMap<String,Integer> playerSubRoundScores;
-    private ArrayList<ClientHandlerGame> sortedPlayers;
+    private ArrayList<ClientHandlerGame> players; 
+    private ArrayList<String> drawHistory; // drawing point history to player who joined in the middle of the game
+    private ArrayList<String> playerDetails; // Stores the each player details in string format 
+    private HashMap<String,Integer> playerSubRoundScores; // stores each player sub-round points
+    private ArrayList<ClientHandlerGame> sortedPlayers; // stores the sorted players details for the player board 
     private int currentPlayerIndexTurn;
     private int MAX_ROUND = 3; // 3 is the default
     private final int MAX_PLAYERS = 8;
@@ -29,13 +29,14 @@ public class GameServer {
     // to handle the synchronization of time update to all clients in a single thread so it will not block the server thread
     private ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> timerTask; // reference to cancel the timer
-    private final int DRAWING_TIME = 50;
+    private final int DRAWING_TIME = 80;
     private final int CHOOSING_WORD_TIME = 3;
     private final int REVEAL_WORD_TIME = 5;
     private final int ROUND_ANNOUNCING_TIME = 3;
     private final int RANK_ANNOUNCING_TIME = 15;
     private int correct_guesses = 0;
     private boolean gameStarted = false;
+    private static int playerIDCounter = 0; // Static counter for unique IDs
     
     public GameServer() {
         players = new ArrayList<>();
@@ -60,8 +61,7 @@ public class GameServer {
                 // create threads instances to each client objects
                 Thread thread = new Thread(player);
                 thread.start();
-                // initialize the player in the hashmap to still display if they did not guess
-                playerSubRoundScores.put(player.getUsername(), 0);
+                
                 
                 
             }
@@ -564,9 +564,11 @@ public class GameServer {
     // add player to the list
     public void addClientHandler(ClientHandlerGame player){
         // check if total players is less than to max players
-        if(players.size() < MAX_PLAYERS){
+        if(players.size() < MAX_PLAYERS && !duplicatedUsername(player)){
             players.add(player);
             broadcastMessage("ANNOUNCEMENT,JOIN," + player.getUsername() + " joined the game!", player);
+            // initialize the player in the hashmap to still display if they did not guess
+            playerSubRoundScores.put(player.getUsername(), 0);
             if (gameStarted) {
                 System.out.println(player.getUsername() + " joined in the middle of the Game!");
                 // broadcast the round status and the current secret word
@@ -579,6 +581,10 @@ public class GameServer {
             assignPlayerHost();
             // update the scoreboard (player list)
             broadcastClientList("PLAYER-LIST:");
+        }
+        else if(duplicatedUsername(player)){
+            player.notifyPlayer("DUPLICATED-USERNAME");
+            System.out.println(player.getUsername() + " client terminated due to duplicated username");
         }
         else{
             player.notifyPlayer("PLAYERS-MAXED");
@@ -595,6 +601,12 @@ public class GameServer {
             }
         }
      
+    }
+    
+    // Method to get the next unique ID
+    // use synchronized since this will be used in multi-threaded environment
+    public synchronized int getNextPlayerID() {
+        return ++playerIDCounter; // Increment and return the counter
     }
     
     // remove player from the list
@@ -660,6 +672,16 @@ public class GameServer {
     
     public void addDrawingPointHistory(String drawingPoint){
         drawHistory.add(drawingPoint);
+    }
+    
+    private boolean duplicatedUsername(ClientHandlerGame client){
+        for(ClientHandlerGame player: players){
+            if(player.getUsername().equals(client.getUsername())){
+                return true;
+            }
+        }
+        
+        return false;
     }
    
     
