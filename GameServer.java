@@ -1,5 +1,5 @@
 
-package skribbl_clone;
+
 
 import java.io.IOException;
 import java.net.ServerSocket;
