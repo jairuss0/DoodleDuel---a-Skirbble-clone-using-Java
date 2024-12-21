@@ -1,8 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-package skribbl_clone;
 
 import java.io.File;
 import java.net.URL;
@@ -12,10 +7,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
-/**
- *
- * @author Elijah
- */
+
 public class WordDictionary {
     
     private ArrayList<String> words = new ArrayList();
