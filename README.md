@@ -20,10 +20,13 @@ A Local Multiplayer _Skribble_ inspired game using Java
   1. Go to your Operating System command line or terminal
   2. Change the directory folder where you downloaded the  _GameServer.java_ , _ClientHandlerGame.java_ , _WordDictionary.java_
   3. To compile type:
+     
      ```
      javac  _GameServer.java_  _ClientHandlerGame.java_  _WordDictionary.java_
      ```
+     
   5. run the main java file:
+     
      ```
       java _GameServer.java_
      ```
@@ -43,14 +46,16 @@ A Local Multiplayer _Skribble_ inspired game using Java
 * Server Responsibility: The players must know your IP and Port. To know your IP 
   1. Go to your Operating system command line or terminal
   2. Type:
+     
   ```
   ipconfig
   ```
+
   3. once you know your IP address as the Server, the players are required to know it
   4. Port default number is _123_
   
 > [!NOTE]
-> Ensure that firewalls on both the server and client (players) devices allow traffic on the port 
+> Ensure that firewalls on both the server and client (players) devices allow traffic on the port.
 > On the server side, make sure port 123 (or whatever port you're using) is open for incoming connections
 
 > [!TIP]
@@ -64,4 +69,3 @@ Free resources available for public use, or
 Created by me, the author of this project.
 
 ENJOYYYYY!!! 
- 
