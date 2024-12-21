@@ -41,7 +41,7 @@ Server responsibility:  to compile the  _GameServer.java_, _ClientHandlerGame.ja
       java -jar "DoddleDuel.jar"
      ```
 
-### HOW TO PLAY THE GAME?
+## HOW TO PLAY THE GAME?
 for the game to be played, players must be in the _same network connection_
 
 * Server Responsibility: The players must know your IP and Port. To know your IP 
