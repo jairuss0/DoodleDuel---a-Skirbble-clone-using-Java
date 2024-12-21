@@ -5,7 +5,7 @@ A Local Multiplayer _Skribble_ inspired game using Java
 * Java GUI Swing
 * Java Sockets
 
-### HOW TO INSTALL?
+## HOW TO INSTALL?
 if you want to test it out with your friends to play with them you must consider the followings: 
 
 * Download Java. I recommended to download Java version 8
@@ -15,7 +15,7 @@ if you want to test it out with your friends to play with them you must consider
   
 * for your friends or classmates to play the game they must download _DoodDuel.zip_ file
 
-### HOW TO RUN THE GAME?
+## HOW TO RUN THE GAME?
 Server responsibility: run the  _GameServer.java_, _ClientHandlerGame.java_ , _WordDictionary.java_   files you must:
   1. Go to your Operating System command line or terminal
   2. Change the directory folder where you downloaded the  _GameServer.java_ , _ClientHandlerGame.java_ , _WordDictionary.java_
