@@ -10,7 +10,8 @@ A Local Multiplayer _Skribble_ inspired game using Java
 
 * Download Java. I recommended to download Java version 8
 
-* One must manage the Server, download the following files _GameServer.java_, _ClientHandlerGame.java_ , _WordDictionary.java_ and the _word_list.txt_ <br> . if you want to be both to manage the Game server and be able to play the game, download the required files and the _DoodleDuel.zip_ file
+* One must manage the Server, download the following files _GameServer.java_, _ClientHandlerGame.java_   _WordDictionary.java_ and the _word_list.txt_ <br>
+* if you want to be both to manage the Game server and be able to play the game, download the required files and the _DoodleDuel.zip_ file
   
 * for your friends or classmates to play the game they must download _DoodDuel.zip_ file
 
