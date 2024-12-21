@@ -1,5 +1,4 @@
 
-package skribbl_clone;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
