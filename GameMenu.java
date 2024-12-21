@@ -1,4 +1,4 @@
-package skribbl_clone;
+
 
 import java.awt.Graphics;
 import java.awt.Image;
