@@ -22,13 +22,13 @@ Server responsibility:  to compile the  _GameServer.java_, _ClientHandlerGame.ja
   3. To compile type:
      
      ```
-     javac  _GameServer.java_  _ClientHandlerGame.java_  _WordDictionary.java_
+     javac  GameServer.java  ClientHandlerGame.java  WordDictionary.java
      ```
      
   5. run the main java file:
      
      ```
-      java _GameServer.java_
+      java GameServer.java
      ```
 
 * To run the following _DoodleDuel.zip_ file you must:
