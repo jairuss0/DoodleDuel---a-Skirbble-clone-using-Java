@@ -36,6 +36,7 @@ A Local Multiplayer _Skribble_ inspired game using Java
   2. Go to your Operating system command line or terminal
   3. Change the directory where you downloaded the zip file
   4. Type:
+     
      ```
       java -jar "DoddleDuel.jar"
      ```
@@ -47,9 +48,9 @@ A Local Multiplayer _Skribble_ inspired game using Java
   1. Go to your Operating system command line or terminal
   2. Type:
      
-  ```
-  ipconfig
-  ```
+    ```
+      ipconfig
+    ```
 
   3. once you know your IP address as the Server, the players are required to know it
   4. Port default number is _123_
@@ -61,11 +62,11 @@ A Local Multiplayer _Skribble_ inspired game using Java
 > [!TIP]
 > I recommend to use WI-FI hotspot as a network to share and connect to. this will prevent the hassle to troubleshoot connectivity due to network restrictions provided by the network administrators
 
-📜 Copyright Notice
+### 📜 Copyright Notice
 This project is created for educational and study purposes only.
 All assets used in this project are either:
 
-Free resources available for public use, or
-Created by me, the author of this project.
+- Free resources available for public use, or
+- Created by me, the author of this project.
 
 ENJOYYYYY!!! 
