@@ -16,7 +16,7 @@ A Local Multiplayer _Skribble_ inspired game using Java
 * for your friends or classmates to play the game they must download _DoodDuel.zip_ file
 
 ### HOW TO RUN THE GAME?
-*  Server responsibility: run the  _GameServer.java_, _ClientHandlerGame.java_ , _WordDictionary.java_   files you must:
+-Server responsibility: run the  _GameServer.java_, _ClientHandlerGame.java_ , _WordDictionary.java_   files you must:
   1. Go to your Operating System command line or terminal
   2. Change the directory folder where you downloaded the  _GameServer.java_ , _ClientHandlerGame.java_ , _WordDictionary.java_
   3. To compile type:
@@ -38,7 +38,7 @@ A Local Multiplayer _Skribble_ inspired game using Java
      ```
 
 ### HOW TO PLAY THE GAME?
-* for the game to be played, players must be in the _same network connection_
+-for the game to be played, players must be in the _same network connection_
 
 * Server Responsibility: The players must know your IP and Port. To know your IP 
   1. Go to your Operating system command line or terminal
