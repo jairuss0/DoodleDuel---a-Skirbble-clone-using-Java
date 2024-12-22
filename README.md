@@ -29,8 +29,9 @@ Server responsibility:  to compile multiple server files  you must:
      
      ```
      javac -cp . doodleserver/*.java
-     - this would compile all the needed server class files
+    
      ```
+     - this would compile all the needed server class files
      
      
   7. run the main java file:
