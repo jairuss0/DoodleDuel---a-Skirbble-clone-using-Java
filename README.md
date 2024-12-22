@@ -43,7 +43,12 @@ Server responsibility:  to compile multiple server files  files you must:
   1. Extract the zip file
   2. Go to your Operating system command line or terminal
   3. Change the directory where you downloaded the zip file
-  4. Type:
+     directory command:
+      
+     ```
+     cd your/path/doodleduel/dist
+     ``` 
+  5. Type:
      
      ```
       java -jar "DoddleDuel.jar"
@@ -54,17 +59,13 @@ for the game to be played, players must be in the _same network connection_
 
 * Server Responsibility: The players must know your IP and Port. To know your IP 
   1. Go to your Operating system command line or terminal
-     directory command:
-      
-     ```
-     cd your/path/doodleduel/dist
-     ``` 
+     
   3. Type:
 
 
-    ```
-      ipconfig
-    ```
+      ```
+        ipconfig
+      ```
 
   3. once you know your IP address as the Server, the players are required to know it
   4. Port default number is _123_
