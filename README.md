@@ -10,7 +10,7 @@ if you want to test it out with your friends to play with them you must consider
 
 * Download Java. I recommended to download Java version 8
 
-* One must manage the Server, download the following folder  _serverFiles_ and 
+* One must manage the Server, download the following folder  _serverFiles_ 
 * if you want to be both to manage the Game server and be able to play the game, download the _DoodleDuel.zip_ file
   
 * for your friends or classmates to play the game they must download _DoodDuel.zip_ file
