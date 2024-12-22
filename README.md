@@ -10,25 +10,33 @@ if you want to test it out with your friends to play with them you must consider
 
 * Download Java. I recommended to download Java version 8
 
-* One must manage the Server, download the following files _GameServer.java_, _ClientHandlerGame.java_   _WordDictionary.java_ and the _word_list.txt_ <br>
-* if you want to be both to manage the Game server and be able to play the game, download the required files and the _DoodleDuel.zip_ file
+* One must manage the Server, download the following folder  _serverFiles_ and 
+* if you want to be both to manage the Game server and be able to play the game, download the _DoodleDuel.zip_ file
   
 * for your friends or classmates to play the game they must download _DoodDuel.zip_ file
 
 ## HOW TO RUN THE GAME?
-Server responsibility:  to compile the  _GameServer.java_, _ClientHandlerGame.java_ , _WordDictionary.java_   files you must:
+Server responsibility:  to compile multiple server files  files you must:
   1. Go to your Operating System command line or terminal
-  2. Change the directory folder where you downloaded the  _GameServer.java_ , _ClientHandlerGame.java_ , _WordDictionary.java_
-  3. To compile type:
+  3. Change the directory folder where you downloaded the _serverFiles_
+     directory command:
+      
+     ```
+     cd your/path/ServerFiles/src
+     ``` 
+     
+  5. To compile type:
      
      ```
-     javac  GameServer.java  ClientHandlerGame.java  WordDictionary.java
+     javac -cp . doodleserver/*.java
+     - this would compile all the needed server class files
      ```
      
-  5. run the main java file:
+     
+  7. run the main java file:
      
      ```
-      java GameServer.java
+      java -cp . doodlserver.GameServer
      ```
 
 * To run the following _DoodleDuel.zip_ file you must:
