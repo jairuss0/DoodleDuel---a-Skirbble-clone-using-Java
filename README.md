@@ -16,7 +16,7 @@ if you want to test it out with your friends to play with them you must consider
 * for your friends or classmates to play the game they must download _DoodDuel.zip_ file
 
 ## HOW TO RUN THE GAME?
-Server responsibility:  to compile multiple server files  files you must:
+Server responsibility:  to compile multiple server files  you must:
   1. Go to your Operating System command line or terminal
   3. Change the directory folder where you downloaded the _serverFiles_
      directory command:
