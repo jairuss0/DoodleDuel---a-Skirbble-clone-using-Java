@@ -1,4 +1,3 @@
-
 package skribbl_clone;
 
 import skribbl_clone.DrawPoint;

@@ -1,6 +1,8 @@
+
 package skribbl_clone;
 import skribbl_clone.GameClient;
 import skribbl_clone.Instructions;
+
 import java.awt.Graphics;
 import java.awt.Image;
 import java.io.IOException;
