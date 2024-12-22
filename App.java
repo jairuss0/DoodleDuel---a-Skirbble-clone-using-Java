@@ -1,7 +1,8 @@
 
 package skribbl_clone;
 
-
+import skribbl_clone.GameMenu;
+import java.awt.Dimension;
 import java.awt.Toolkit;
 
 
@@ -25,9 +26,11 @@ public class App {
         javax.swing.SwingUtilities.invokeLater(() -> {
             GameMenu menu = new GameMenu();
             menu.setTitle("DoodleDuel - Menu");
-            menu.setResizable(true);
-            menu.setLocationRelativeTo(null);
             menu.pack();
+            menu.setResizable(true);
+            menu.setMinimumSize(new Dimension(780,508));
+            menu.setLocationRelativeTo(null);
+           
             menu.setVisible(true);
         });
        

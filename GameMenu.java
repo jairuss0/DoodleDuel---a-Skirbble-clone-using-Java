@@ -1,5 +1,6 @@
 package skribbl_clone;
-
+import skribbl_clone.GameClient;
+import skribbl_clone.Instructions;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.io.IOException;
@@ -8,6 +9,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import java.awt.Dimension;
 
 public class GameMenu extends JFrame {
     private Image backgroundImage;
@@ -45,11 +47,22 @@ public class GameMenu extends JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setBackground(new java.awt.Color(255, 255, 255));
-        setMinimumSize(new java.awt.Dimension(653, 446));
+        setMinimumSize(new Dimension(780,508));
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                formComponentResized(evt);
+            }
+        });
 
         jPanel1.setBackground(new java.awt.Color(0, 65, 108));
         jPanel1.setMaximumSize(new java.awt.Dimension(1000, 1000));
-        jPanel1.setMinimumSize(new java.awt.Dimension(653, 446));
+        jPanel1.setMinimumSize(new Dimension(780,508));
+        jPanel1.setPreferredSize(new java.awt.Dimension(780, 508));
+        jPanel1.addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                jPanel1ComponentResized(evt);
+            }
+        });
         jPanel1.setLayout(new java.awt.GridBagLayout());
 
         jPanel2.setBackground(new java.awt.Color(255, 102, 51));
@@ -136,11 +149,11 @@ public class GameMenu extends JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 780, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 508, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         pack();
@@ -208,7 +221,7 @@ public class GameMenu extends JFrame {
        
     }//GEN-LAST:event_jButton1KeyPressed
     private void configSocket(String username,String ip, String port){
-        // Adjust UI scale for high-DPI displays 
+        
         
         int portNo = Integer.parseInt(port);
         try {
@@ -219,6 +232,8 @@ public class GameMenu extends JFrame {
             GameClient gameClient = new GameClient(socket, username);
             gameClient.setLocationRelativeTo(null);
             gameClient.pack();
+            gameClient.setResizable(true);
+            gameClient.setMinimumSize(new Dimension(1393,842));
             // method to listen for the incoming messages
             gameClient.listenForMessage();
             gameClient.setVisible(true);
@@ -250,9 +265,21 @@ public class GameMenu extends JFrame {
         instructions.pack();
         instructions.setLocationRelativeTo(null);
         instructions.setVisible(true);
+        
       
         
     }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jPanel1ComponentResized(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_jPanel1ComponentResized
+        // TODO add your handling code here:
+        int width = jPanel1.getWidth();
+        int height = jPanel1.getHeight();
+        System.out.println("Width: " + width + ", Height: " + height);
+    }//GEN-LAST:event_jPanel1ComponentResized
+
+    private void formComponentResized(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentResized
+        // TODO add your handling code here:
+    }//GEN-LAST:event_formComponentResized
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

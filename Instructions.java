@@ -1,6 +1,7 @@
 
 package skribbl_clone;
 
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
 import javax.swing.ImageIcon;
@@ -73,6 +74,7 @@ public class Instructions extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("How to Play");
+        setMinimumSize(new Dimension(1049,701));
         setResizable(false);
 
         mainPanel.setBackground(new java.awt.Color(0, 51, 102));
