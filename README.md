@@ -22,7 +22,7 @@ Server responsibility:  to compile multiple server files  files you must:
      directory command:
       
      ```
-     cd your/path/ServerFiles/src
+     cd your/path/serverFiles/src
      ``` 
      
   5. To compile type:
