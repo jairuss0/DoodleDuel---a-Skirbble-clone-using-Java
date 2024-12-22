@@ -54,8 +54,14 @@ for the game to be played, players must be in the _same network connection_
 
 * Server Responsibility: The players must know your IP and Port. To know your IP 
   1. Go to your Operating system command line or terminal
-  2. Type:
-     
+     directory command:
+      
+     ```
+     cd your/path/doodleduel/dist
+     ``` 
+  3. Type:
+
+
     ```
       ipconfig
     ```
